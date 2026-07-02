@@ -6,11 +6,17 @@ const downloadedCount = document.getElementById("downloadedCount");
 const failedCount = document.getElementById("failedCount");
 const concurrencyInput = document.getElementById("concurrencyInput");
 const queueToggleBtn = document.getElementById("queueToggleBtn");
-const diagnosticsBtn = document.getElementById("diagnosticsBtn");
 
 let queueOpen = false;
 let diagnosticsOpen = false;
 let diagnosticAlertCount = 0;
+let busy = false;
+
+function closeMenus() {
+  document.querySelectorAll(".menu[open]").forEach((menu) => {
+    menu.removeAttribute("open");
+  });
+}
 
 function downloadConcurrency() {
   const parsed = Number.parseInt(concurrencyInput.value, 10);
@@ -19,12 +25,14 @@ function downloadConcurrency() {
 }
 
 function setBusy(isBusy) {
-  document.getElementById("currentBtn").disabled = isBusy;
-  document.getElementById("allBtn").disabled = isBusy;
-  document.getElementById("sharedCurrentBtn").disabled = isBusy;
-  document.getElementById("sharedAllBtn").disabled = isBusy;
-  document.getElementById("resumeBtn").disabled = isBusy;
+  busy = isBusy;
+  document.body.classList.toggle("is-busy", busy);
+  document.querySelectorAll("[data-busy-disabled]").forEach((control) => {
+    control.disabled = busy;
+  });
+  document.getElementById("stopBtn").disabled = !busy;
   concurrencyInput.disabled = isBusy;
+  if (busy) closeMenus();
 }
 
 function renderProgress(event) {
@@ -59,23 +67,15 @@ window.teamsBackup.onQueueVisibility(renderQueueToggle);
 
 function renderDiagnosticsToggle(open) {
   diagnosticsOpen = open;
-  diagnosticsBtn.classList.toggle("active", diagnosticsOpen);
   if (diagnosticsOpen) diagnosticAlertCount = 0;
-  diagnosticsBtn.classList.toggle("hasAlert", diagnosticAlertCount > 0);
-  diagnosticsBtn.textContent = diagnosticsOpen
-    ? "Hide Diagnostics"
-    : diagnosticAlertCount > 0 ? `Diagnostics (${diagnosticAlertCount})` : "Diagnostics";
 }
 
 window.teamsBackup.onDiagnosticsVisibility(renderDiagnosticsToggle);
 window.teamsBackup.onDiagnosticEvent((event) => {
   if (event.level !== "warning" && event.level !== "error") return;
   if (!diagnosticsOpen) diagnosticAlertCount = Math.min(99, diagnosticAlertCount + 1);
-  diagnosticsBtn.classList.toggle("hasAlert", diagnosticAlertCount > 0);
-  diagnosticsBtn.textContent = diagnosticsOpen
-    ? "Hide Diagnostics"
-    : diagnosticAlertCount > 0 ? `Diagnostics (${diagnosticAlertCount})` : "Diagnostics";
-  diagnosticsBtn.title = event.message;
+  queueToggleBtn.classList.toggle("hasAlert", diagnosticAlertCount > 0);
+  queueToggleBtn.title = event.message;
 });
 
 queueToggleBtn.addEventListener("click", async () => {
@@ -83,9 +83,15 @@ queueToggleBtn.addEventListener("click", async () => {
   await window.teamsBackup.setQueuePanelOpen(queueOpen);
 });
 
-diagnosticsBtn.addEventListener("click", async () => {
-  renderDiagnosticsToggle(!diagnosticsOpen);
-  await window.teamsBackup.setDiagnosticsPanelOpen(diagnosticsOpen);
+document.addEventListener("click", (event) => {
+  const clickedMenu = event.target.closest?.(".menu");
+  document.querySelectorAll(".menu[open]").forEach((menu) => {
+    if (menu !== clickedMenu) menu.removeAttribute("open");
+  });
+});
+
+document.querySelectorAll(".menuPanel button").forEach((button) => {
+  button.addEventListener("click", closeMenus);
 });
 
 document.getElementById("teamsBtn").addEventListener("click", () => {

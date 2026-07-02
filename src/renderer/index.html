@@ -18,23 +18,53 @@
     </div>
 
     <div class="actions">
-      <button id="teamsBtn">Reload Teams</button>
-      <button id="resetTeamsBtn">Reset Teams Session</button>
-      <button id="folderBtn">Choose Folder</button>
-      <label class="concurrencyControl" title="Parallel file/image downloads">
-        <span>Downloads</span>
+      <details class="menu">
+        <summary>Teams</summary>
+        <div class="menuPanel">
+          <button id="teamsBtn" data-busy-disabled="true">Reload Teams</button>
+          <button id="resetTeamsBtn" data-busy-disabled="true">Reset Session</button>
+        </div>
+      </details>
+
+      <details class="menu">
+        <summary>Folder</summary>
+        <div class="menuPanel">
+          <button id="folderBtn" data-busy-disabled="true">Choose Folder</button>
+          <button id="openBtn">Open Export</button>
+        </div>
+      </details>
+
+      <label class="concurrencyControl" title="Concurrent download threads">
+        <span>Concurrent Download Threads</span>
         <input id="concurrencyInput" type="number" min="1" max="10" step="1" value="5">
       </label>
-      <button id="currentBtn" class="primary">Export Current Chat</button>
-      <button id="allBtn" class="primary">Export All Chats</button>
-      <button id="sharedCurrentBtn">Shared Current</button>
-      <button id="sharedAllBtn">Shared All Chats</button>
-      <button id="resumeBtn">Resume Folder</button>
-      <button id="diagnosticsBtn">Diagnostics</button>
-      <button id="teamsDevtoolsBtn">Teams DevTools</button>
-      <button id="panelDevtoolsBtn">Panel DevTools</button>
-      <button id="stopBtn" class="danger">Stop</button>
-      <button id="openBtn">Open Export</button>
+
+      <details class="menu">
+        <summary class="primary">Export Chat</summary>
+        <div class="menuPanel">
+          <button id="currentBtn" data-busy-disabled="true">Current Chat</button>
+          <button id="allBtn" data-busy-disabled="true">All Chats</button>
+        </div>
+      </details>
+
+      <details class="menu">
+        <summary class="primary">Export Files</summary>
+        <div class="menuPanel">
+          <button id="sharedCurrentBtn" data-busy-disabled="true">Current Chat</button>
+          <button id="sharedAllBtn" data-busy-disabled="true">All Chats</button>
+        </div>
+      </details>
+
+      <button id="resumeBtn" data-busy-disabled="true" title="Resume from an existing export folder">Resume</button>
+      <button id="stopBtn" class="danger" disabled>Stop</button>
+
+      <details class="menu">
+        <summary>Dev Tools</summary>
+        <div class="menuPanel menuPanelRight">
+          <button id="panelDevtoolsBtn">App</button>
+          <button id="teamsDevtoolsBtn">Browser</button>
+        </div>
+      </details>
     </div>
 
     <div class="stats">
