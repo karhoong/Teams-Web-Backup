@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Download Queue</title>
+  <link rel="icon" href="../../build/icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="queueWindow">
+  <section class="queuePanel floating">
+    <div class="queueHeader">
+      <div>
+        <h1>Download Queue</h1>
+        <p id="queueSummary">No queued items.</p>
+      </div>
+      <div class="queueActions">
+        <button id="refreshQueueBtn">Refresh</button>
+        <button id="closeQueueBtn">Close</button>
+      </div>
+    </div>
+    <div id="queueList" class="queueList" aria-live="polite"></div>
+  </section>
+
+  <script src="./queue.js"></script>
+</body>
+</html>

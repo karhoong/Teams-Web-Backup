@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teams Web Backup</title>
+  <link rel="icon" href="../../build/icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="panel">
+    <div class="brand">
+      <img class="mark" src="../../build/icon.png" alt="">
+      <div>
+        <h1>Teams Web Backup</h1>
+        <p id="statusText">Sign in to Teams, open Chats, then start an export.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="teamsBtn">Reload Teams</button>
+      <button id="resetTeamsBtn">Reset Teams Session</button>
+      <button id="folderBtn">Choose Folder</button>
+      <label class="concurrencyControl" title="Parallel file/image downloads">
+        <span>Downloads</span>
+        <input id="concurrencyInput" type="number" min="1" max="10" step="1" value="5">
+      </label>
+      <button id="currentBtn" class="primary">Export Current Chat</button>
+      <button id="allBtn" class="primary">Export All Chats</button>
+      <button id="sharedCurrentBtn">Shared Current</button>
+      <button id="sharedAllBtn">Shared All Chats</button>
+      <button id="resumeBtn">Resume Folder</button>
+      <button id="diagnosticsBtn">Diagnostics</button>
+      <button id="teamsDevtoolsBtn">Teams DevTools</button>
+      <button id="panelDevtoolsBtn">Panel DevTools</button>
+      <button id="stopBtn" class="danger">Stop</button>
+      <button id="openBtn">Open Export</button>
+    </div>
+
+    <div class="stats">
+      <span><b id="chatCount">0</b> chats</span>
+      <span><b id="messageCount">0</b> messages</span>
+      <span><b id="queuedCount">0</b> queued</span>
+      <span><b id="downloadedCount">0</b> files</span>
+      <span><b id="failedCount">0</b> failed</span>
+      <button id="queueToggleBtn" class="queueToggle" aria-expanded="false">Queue Items</button>
+    </div>
+  </header>
+
+  <script src="./app.js"></script>
+</body>
+</html>

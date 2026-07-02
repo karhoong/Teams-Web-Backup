@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnostics</title>
+  <link rel="icon" href="../../build/icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="diagnosticsWindow">
+  <section class="diagnosticsPanel">
+    <div class="diagnosticsHeader">
+      <div>
+        <h1>Diagnostics</h1>
+        <p id="diagnosticsSummary">Loading diagnostics...</p>
+      </div>
+      <div class="diagnosticsActions">
+        <button id="refreshDiagnosticsBtn">Refresh</button>
+        <button id="copyDiagnosticsBtn">Copy</button>
+        <button id="clearDiagnosticsBtn">Clear View</button>
+        <button id="closeDiagnosticsBtn">Close</button>
+      </div>
+    </div>
+    <div id="diagnosticsState" class="diagnosticsState"></div>
+    <div id="diagnosticsList" class="diagnosticsList" aria-live="polite"></div>
+  </section>
+
+  <script src="./diagnostics.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+{
+  "name": "microsoft-teams-web-backup",
+  "productName": "Teams Web Backup",
+  "version": "1.0.1",
+  "description": "Resumable Microsoft Teams Web chat backup tool.",
+  "main": "dist/main/main.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "npm run build && electron .",
+    "test": "vitest run src/test",
+    "check": "npm run build && npm run test",
+    "pack": "npm run build && electron-builder --dir --publish never",
+    "dist": "npm run dist:mac:all && npm run dist:win:all",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:mac:all": "npm run build && electron-builder --mac --arm64 --x64 --publish never",
+    "dist:mac:arm64": "npm run build && electron-builder --mac --arm64 --publish never",
+    "dist:mac:x64": "npm run build && electron-builder --mac --x64 --publish never",
+    "dist:win": "npm run build && electron-builder --win zip --x64 --publish never",
+    "dist:win:all": "npm run build && electron-builder --win zip --x64 --arm64 --publish never",
+    "dist:win:x64": "npm run build && electron-builder --win zip --x64 --publish never",
+    "dist:win:arm64": "npm run build && electron-builder --win zip --arm64 --publish never",
+    "dist:win:installer": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "verify:mac:arm64": "codesign --verify --deep --strict --verbose=4 \"release/mac-arm64/Teams Web Backup.app\""
+  },
+  "keywords": [
+    "microsoft-teams",
+    "backup",
+    "electron",
+    "jsonl"
+  ],
+  "author": "Chan Kar Hoong",
+  "license": "MIT",
+  "build": {
+    "appId": "com.karhoong.teamswebbackup",
+    "productName": "Teams Web Backup",
+    "copyright": "Copyright © 2026 Chan Kar Hoong",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "compression": "normal",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/test/**/*",
+      "src/renderer/**/*",
+      "build/icon.svg",
+      "build/icon.png",
+      "build/icon.ico",
+      "build/icon.icns",
+      "package.json",
+      "README.md"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "zip"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Teams Web Backup"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "electron": "^42.5.1",
+    "electron-builder": "^26.15.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
