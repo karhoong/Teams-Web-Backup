@@ -16,7 +16,12 @@ let lastPanelHeight = 0;
 
 function reportPanelHeight() {
   if (!panel) return;
-  const height = Math.ceil(panel.getBoundingClientRect().height);
+  const panelRect = panel.getBoundingClientRect();
+  let bottom = panelRect.bottom;
+  document.querySelectorAll(".menu[open] .menuPanel").forEach((menuPanel) => {
+    bottom = Math.max(bottom, menuPanel.getBoundingClientRect().bottom);
+  });
+  const height = Math.ceil(bottom - panelRect.top + 8);
   if (!height || Math.abs(height - lastPanelHeight) < 1) return;
   lastPanelHeight = height;
   void window.teamsBackup.setPanelHeight(height);
@@ -32,6 +37,7 @@ function closeMenus() {
   document.querySelectorAll(".menu[open]").forEach((menu) => {
     menu.removeAttribute("open");
   });
+  requestAnimationFrame(reportPanelHeight);
 }
 
 function downloadConcurrency() {
@@ -104,10 +110,17 @@ document.addEventListener("click", (event) => {
   document.querySelectorAll(".menu[open]").forEach((menu) => {
     if (menu !== clickedMenu) menu.removeAttribute("open");
   });
+  requestAnimationFrame(reportPanelHeight);
 });
 
 document.querySelectorAll(".menuPanel button").forEach((button) => {
   button.addEventListener("click", closeMenus);
+});
+
+document.querySelectorAll(".menu").forEach((menu) => {
+  menu.addEventListener("toggle", () => {
+    requestAnimationFrame(reportPanelHeight);
+  });
 });
 
 document.getElementById("teamsBtn").addEventListener("click", () => {

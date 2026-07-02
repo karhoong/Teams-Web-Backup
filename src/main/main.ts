@@ -950,7 +950,7 @@ function registerIpc(): void {
     setDiagnosticsWindowOpen(open);
   });
   ipcMain.handle("ui:setPanelHeight", (_event, height: number) => {
-    const nextHeight = Math.min(220, Math.max(82, Math.ceil(height || DEFAULT_PANEL_HEIGHT)));
+    const nextHeight = Math.min(280, Math.max(82, Math.ceil(height || DEFAULT_PANEL_HEIGHT)));
     if (Math.abs(nextHeight - panelHeight) < 1) return;
     panelHeight = nextHeight;
     layoutTeamsView();
