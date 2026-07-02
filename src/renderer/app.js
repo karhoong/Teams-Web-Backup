@@ -6,11 +6,27 @@ const downloadedCount = document.getElementById("downloadedCount");
 const failedCount = document.getElementById("failedCount");
 const concurrencyInput = document.getElementById("concurrencyInput");
 const queueToggleBtn = document.getElementById("queueToggleBtn");
+const panel = document.querySelector(".panel");
 
 let queueOpen = false;
 let diagnosticsOpen = false;
 let diagnosticAlertCount = 0;
 let busy = false;
+let lastPanelHeight = 0;
+
+function reportPanelHeight() {
+  if (!panel) return;
+  const height = Math.ceil(panel.getBoundingClientRect().height);
+  if (!height || Math.abs(height - lastPanelHeight) < 1) return;
+  lastPanelHeight = height;
+  void window.teamsBackup.setPanelHeight(height);
+}
+
+if (panel) {
+  new ResizeObserver(reportPanelHeight).observe(panel);
+  window.addEventListener("resize", reportPanelHeight);
+  requestAnimationFrame(reportPanelHeight);
+}
 
 function closeMenus() {
   document.querySelectorAll(".menu[open]").forEach((menu) => {

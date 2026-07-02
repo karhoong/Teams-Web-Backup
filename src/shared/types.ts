@@ -241,6 +241,7 @@ export interface AppApi {
   openPanelDevTools(): Promise<void>;
   setQueuePanelOpen(open: boolean): Promise<void>;
   setDiagnosticsPanelOpen(open: boolean): Promise<void>;
+  setPanelHeight(height: number): Promise<void>;
   getQueueItems(): Promise<QueueItemsSnapshot>;
   getDiagnostics(): Promise<DiagnosticsSnapshot>;
   onQueueVisibility(callback: (open: boolean) => void): () => void;

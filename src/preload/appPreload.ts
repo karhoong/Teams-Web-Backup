@@ -15,6 +15,7 @@ const api: AppApi = {
   openPanelDevTools: () => ipcRenderer.invoke("devtools:panel"),
   setQueuePanelOpen: (open) => ipcRenderer.invoke("ui:setQueuePanelOpen", open),
   setDiagnosticsPanelOpen: (open) => ipcRenderer.invoke("ui:setDiagnosticsPanelOpen", open),
+  setPanelHeight: (height) => ipcRenderer.invoke("ui:setPanelHeight", height),
   getQueueItems: () => ipcRenderer.invoke("export:getQueueItems"),
   getDiagnostics: () => ipcRenderer.invoke("diagnostics:get"),
   onQueueVisibility: (callback: (open: boolean) => void) => {

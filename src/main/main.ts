@@ -24,7 +24,7 @@ import { sleep } from "../shared/utils";
 const TEAMS_URL = "https://teams.cloud.microsoft/";
 const TEAMS_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0";
 const TEAMS_PARTITION = "persist:teams-web-backup-v2";
-const PANEL_HEIGHT = 176;
+const DEFAULT_PANEL_HEIGHT = 118;
 const DEFAULT_DOWNLOAD_CONCURRENCY = 5;
 const APP_NAME = "Teams Web Backup";
 const APP_ID = "com.karhoong.teamswebbackup";
@@ -53,6 +53,7 @@ let lastCurrentChat: string | undefined;
 let lastPhase: ExportProgress["phase"] | "unknown" = "unknown";
 let watchdogTimer: NodeJS.Timeout | null = null;
 let lastWatchdogWarningAt = 0;
+let panelHeight = DEFAULT_PANEL_HEIGHT;
 const diagnosticsLog: DiagnosticEvent[] = [];
 const MAX_DIAGNOSTICS = 500;
 const WATCHDOG_WARNING_MS = 90000;
@@ -244,7 +245,7 @@ function createWindow(): void {
 function layoutTeamsView(): void {
   if (!mainWindow || !teamsView) return;
   const [width, height] = mainWindow.getContentSize();
-  teamsView.setBounds({ x: 0, y: PANEL_HEIGHT, width, height: Math.max(0, height - PANEL_HEIGHT) });
+  teamsView.setBounds({ x: 0, y: panelHeight, width, height: Math.max(0, height - panelHeight) });
   teamsView.setAutoResize({ width: true, height: true });
 }
 
@@ -278,7 +279,7 @@ function createQueueWindow(): BrowserWindow {
     minWidth: 520,
     minHeight: 240,
     x: parentBounds ? parentBounds.x + Math.max(24, parentBounds.width - 1020) : undefined,
-    y: parentBounds ? parentBounds.y + PANEL_HEIGHT + 24 : undefined,
+    y: parentBounds ? parentBounds.y + panelHeight + 24 : undefined,
     title: "Download Queue",
     icon: appIconPath(),
     parent: mainWindow ?? undefined,
@@ -319,7 +320,7 @@ function createDiagnosticsWindow(): BrowserWindow {
     minWidth: 640,
     minHeight: 320,
     x: parentBounds ? parentBounds.x + Math.max(24, parentBounds.width - 1120) : undefined,
-    y: parentBounds ? parentBounds.y + PANEL_HEIGHT + 64 : undefined,
+    y: parentBounds ? parentBounds.y + panelHeight + 64 : undefined,
     title: "Diagnostics",
     icon: appIconPath(),
     parent: mainWindow ?? undefined,
@@ -947,6 +948,12 @@ function registerIpc(): void {
   });
   ipcMain.handle("ui:setDiagnosticsPanelOpen", (_event, open: boolean) => {
     setDiagnosticsWindowOpen(open);
+  });
+  ipcMain.handle("ui:setPanelHeight", (_event, height: number) => {
+    const nextHeight = Math.min(220, Math.max(82, Math.ceil(height || DEFAULT_PANEL_HEIGHT)));
+    if (Math.abs(nextHeight - panelHeight) < 1) return;
+    panelHeight = nextHeight;
+    layoutTeamsView();
   });
   ipcMain.handle("export:getQueueItems", () => exportStore?.getQueueItems() ?? { total: 0, showing: 0, items: [] });
   ipcMain.handle("diagnostics:get", () => diagnosticsSnapshot());
