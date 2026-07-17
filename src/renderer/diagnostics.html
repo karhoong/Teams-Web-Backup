@@ -11,20 +11,24 @@
   <section class="diagnosticsPanel">
     <div class="diagnosticsHeader">
       <div>
-        <h1>Diagnostics</h1>
-        <p id="diagnosticsSummary">Loading diagnostics...</p>
+        <div class="titleRow">
+          <h1 data-i18n="diagnostics">Diagnostics</h1>
+          <span id="versionLabel" class="versionLabel"></span>
+        </div>
+        <p id="diagnosticsSummary" data-i18n="loadingDiagnostics">Loading diagnostics...</p>
       </div>
       <div class="diagnosticsActions">
-        <button id="refreshDiagnosticsBtn">Refresh</button>
-        <button id="copyDiagnosticsBtn">Copy</button>
-        <button id="clearDiagnosticsBtn">Clear View</button>
-        <button id="closeDiagnosticsBtn">Close</button>
+        <button id="refreshDiagnosticsBtn" data-i18n="refresh">Refresh</button>
+        <button id="copyDiagnosticsBtn" data-i18n="copy">Copy</button>
+        <button id="clearDiagnosticsBtn" data-i18n="clearView">Clear View</button>
+        <button id="closeDiagnosticsBtn" data-i18n="close">Close</button>
       </div>
     </div>
     <div id="diagnosticsState" class="diagnosticsState"></div>
     <div id="diagnosticsList" class="diagnosticsList" aria-live="polite"></div>
   </section>
 
+  <script src="./i18n.js"></script>
   <script src="./diagnostics.js"></script>
 </body>
 </html>

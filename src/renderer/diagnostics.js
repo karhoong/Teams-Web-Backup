@@ -1,3 +1,4 @@
+const i18n = window.TeamsBackupI18n;
 const diagnosticsSummary = document.getElementById("diagnosticsSummary");
 const diagnosticsState = document.getElementById("diagnosticsState");
 const diagnosticsList = document.getElementById("diagnosticsList");
@@ -8,6 +9,12 @@ const closeDiagnosticsBtn = document.getElementById("closeDiagnosticsBtn");
 
 let snapshot = null;
 let viewEvents = [];
+let appInfo = { name: "Teams Web Backup", version: "" };
+
+function renderIdentity() {
+  document.getElementById("versionLabel").textContent = `v${appInfo.version}`;
+  document.title = `${i18n.t("appName")} - ${i18n.t("diagnostics")} - v${appInfo.version}`;
+}
 
 function formatTime(value) {
   if (!value) return "-";
@@ -19,24 +26,24 @@ function formatTime(value) {
 }
 
 function queueText(queue) {
-  if (!queue) return "queue unavailable";
-  return `${queue.queued} queued, ${queue.downloading} downloading, ${queue.active} active, ${queue.browserPending} browser pending, ${queue.manual} manual, ${queue.failed} failed`;
+  if (!queue) return i18n.t("queueUnavailable");
+  return i18n.t("diagnosticsQueue", queue);
 }
 
 function renderState() {
   if (!snapshot) return;
   const lastProgress = snapshot.lastProgressAt ? `${formatTime(snapshot.lastProgressAt)} - ${snapshot.lastProgressMessage || ""}` : "-";
-  diagnosticsSummary.textContent = `${snapshot.running ? "Running" : "Not running"} | ${snapshot.phase} | ${queueText(snapshot.queue)}`;
+  diagnosticsSummary.textContent = `${i18n.t(snapshot.running ? "running" : "notRunning")} | ${snapshot.phase} | ${queueText(snapshot.queue)}`;
   diagnosticsState.innerHTML = "";
   const rows = [
-    ["Phase", snapshot.phase],
-    ["Running", snapshot.running ? "yes" : "no"],
-    ["Stop requested", snapshot.stopRequested ? "yes" : "no"],
-    ["Current chat", snapshot.currentChat || "-"],
-    ["Last progress", lastProgress],
-    ["Teams URL", snapshot.teamsUrl || "-"],
-    ["Export folder", snapshot.exportRoot || "-"],
-    ["Queue", queueText(snapshot.queue)]
+    [i18n.t("phase"), snapshot.phase],
+    [i18n.t("running"), i18n.t(snapshot.running ? "yes" : "no")],
+    [i18n.t("stopRequested"), i18n.t(snapshot.stopRequested ? "yes" : "no")],
+    [i18n.t("currentChat"), snapshot.currentChat || "-"],
+    [i18n.t("lastProgress"), lastProgress],
+    [i18n.t("teamsUrl"), snapshot.teamsUrl || "-"],
+    [i18n.t("exportFolder"), snapshot.exportRoot || "-"],
+    [i18n.t("queue"), queueText(snapshot.queue)]
   ];
   for (const [label, value] of rows) {
     const row = document.createElement("div");
@@ -53,7 +60,7 @@ function renderEvents() {
   if (viewEvents.length === 0) {
     const empty = document.createElement("div");
     empty.className = "diagnosticsEmpty";
-    empty.textContent = "No diagnostics yet.";
+    empty.textContent = i18n.t("noDiagnostics");
     diagnosticsList.appendChild(empty);
     return;
   }
@@ -107,9 +114,9 @@ copyDiagnosticsBtn.addEventListener("click", async () => {
     visibleEvents: viewEvents
   };
   await window.teamsBackup.copyText(JSON.stringify(payload, null, 2));
-  copyDiagnosticsBtn.textContent = "Copied";
+  copyDiagnosticsBtn.textContent = i18n.t("copied");
   setTimeout(() => {
-    copyDiagnosticsBtn.textContent = "Copy";
+    copyDiagnosticsBtn.textContent = i18n.t("copy");
   }, 1200);
 });
 
@@ -123,3 +130,22 @@ closeDiagnosticsBtn.addEventListener("click", () => {
 });
 
 refreshDiagnostics();
+
+window.teamsBackup.onPreferencesChanged((preferences) => {
+  i18n.setPreferences(preferences);
+  renderIdentity();
+  renderState();
+  renderEvents();
+});
+
+window.addEventListener("teams-backup-locale-changed", () => {
+  renderIdentity();
+  renderState();
+  renderEvents();
+});
+
+Promise.all([window.teamsBackup.getAppInfo(), window.teamsBackup.getPreferences()]).then(([info, preferences]) => {
+  appInfo = info;
+  i18n.setPreferences(preferences);
+  renderIdentity();
+});

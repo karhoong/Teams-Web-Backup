@@ -11,17 +11,21 @@
   <section class="queuePanel floating">
     <div class="queueHeader">
       <div>
-        <h1>Download Queue</h1>
-        <p id="queueSummary">No queued items.</p>
+        <div class="titleRow">
+          <h1 data-i18n="downloadQueue">Download Queue</h1>
+          <span id="versionLabel" class="versionLabel"></span>
+        </div>
+        <p id="queueSummary" data-i18n="noQueuedItems">No queued items.</p>
       </div>
       <div class="queueActions">
-        <button id="refreshQueueBtn">Refresh</button>
-        <button id="closeQueueBtn">Close</button>
+        <button id="refreshQueueBtn" data-i18n="refresh">Refresh</button>
+        <button id="closeQueueBtn" data-i18n="close">Close</button>
       </div>
     </div>
     <div id="queueList" class="queueList" aria-live="polite"></div>
   </section>
 
+  <script src="./i18n.js"></script>
   <script src="./queue.js"></script>
 </body>
 </html>

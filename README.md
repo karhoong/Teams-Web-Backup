@@ -17,6 +17,9 @@ This project is a fallback backup tool. If your tenant admin can grant the requi
 - Keeps message export moving when file downloads fail.
 - Shows a resizable download queue and diagnostics window.
 - Retries or skips stuck chats, stuck scrolls, failed Shared scans, and slow downloads instead of freezing indefinitely.
+- Supports light mode, dark mode, or the system appearance. System appearance is the default.
+- Includes English, Simplified Chinese, Traditional Chinese, Japanese, Spanish, French, German, Brazilian Portuguese, and Korean interfaces.
+- Shows the installed app version in the window title, toolbar, Settings, queue, and diagnostics windows.
 
 ## How It Works
 
@@ -117,13 +120,14 @@ npm run build
 2. Sign in to Teams Web inside the app window.
 3. Open the Teams Chat view.
 4. Choose an export folder, or let the app create one under Downloads.
-5. Use one of the export actions:
+5. Open `Settings` to choose an appearance and interface language. Settings are saved automatically for future launches.
+6. Use one of the export actions:
    - `Export Current Chat`
    - `Export All Chats`
    - `Shared Current`
    - `Shared All Chats`
-6. Watch Diagnostics and Queue Items if anything appears stuck.
-7. If the app is stopped or closed, use `Resume Folder` and choose the existing export folder.
+7. Watch Diagnostics and Queue Items if anything appears stuck.
+8. If the app is stopped or closed, use `Resume` and choose the existing export folder.
 
 ## Resume Behavior
 
@@ -174,7 +178,7 @@ Current app identity:
 
 - Product name: `Teams Web Backup`
 - App ID: `com.karhoong.teamswebbackup`
-- Version: `1.0.1`
+- Version: `1.0.2`
 - macOS icon: `build/icon.icns`
 - Windows icon: `build/icon.ico`
 - Runtime/window icon: `build/icon.png`

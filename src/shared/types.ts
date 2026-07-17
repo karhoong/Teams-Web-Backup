@@ -2,6 +2,18 @@ export type ExportMode = "current" | "all" | "shared-current" | "shared-all";
 export type ExportPhase = "idle" | "starting" | "exporting" | "downloading" | "stopped" | "done" | "error";
 export type FileStatus = "queued" | "downloading" | "downloaded" | "failed" | "manual";
 export type AttachmentKind = "file" | "image" | "pdf" | "avatar" | "link";
+export type ThemePreference = "system" | "light" | "dark";
+export type LanguagePreference = "system" | "en" | "zh-CN" | "zh-TW" | "ja" | "es" | "fr" | "de" | "pt-BR" | "ko";
+
+export interface AppPreferences {
+  theme: ThemePreference;
+  language: LanguagePreference;
+}
+
+export interface AppInfo {
+  name: string;
+  version: string;
+}
 
 export interface ChatRecord {
   id: string;
@@ -228,6 +240,10 @@ export interface NetworkEventRecord {
 }
 
 export interface AppApi {
+  getAppInfo(): Promise<AppInfo>;
+  getPreferences(): Promise<AppPreferences>;
+  savePreferences(preferences: AppPreferences): Promise<AppPreferences>;
+  openSettings(): Promise<void>;
   startExport(options: ExportStartOptions): Promise<{ exportRoot: string }>;
   stopExport(): Promise<void>;
   chooseBaseFolder(): Promise<string | null>;
@@ -248,4 +264,5 @@ export interface AppApi {
   onDiagnosticsVisibility(callback: (open: boolean) => void): () => void;
   onDiagnosticEvent(callback: (event: DiagnosticEvent) => void): () => void;
   onProgress(callback: (event: ExportProgress) => void): () => void;
+  onPreferencesChanged(callback: (preferences: AppPreferences) => void): () => void;
 }

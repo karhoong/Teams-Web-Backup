@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer } from "electron";
 import { AppApi, DiagnosticEvent, ExportProgress, ExportStartOptions } from "../shared/types";
 
 const api: AppApi = {
+  getAppInfo: () => ipcRenderer.invoke("app:getInfo"),
+  getPreferences: () => ipcRenderer.invoke("preferences:get"),
+  savePreferences: (preferences) => ipcRenderer.invoke("preferences:save", preferences),
+  openSettings: () => ipcRenderer.invoke("settings:open"),
   startExport: (options: ExportStartOptions) => ipcRenderer.invoke("export:start", options),
   stopExport: () => ipcRenderer.invoke("export:stop"),
   chooseBaseFolder: () => ipcRenderer.invoke("export:chooseBaseFolder"),
@@ -37,6 +41,11 @@ const api: AppApi = {
     const listener = (_event: Electron.IpcRendererEvent, progress: ExportProgress) => callback(progress);
     ipcRenderer.on("export:progress", listener);
     return () => ipcRenderer.removeListener("export:progress", listener);
+  },
+  onPreferencesChanged: (callback) => {
+    const listener = (_event: Electron.IpcRendererEvent, preferences: Parameters<typeof callback>[0]) => callback(preferences);
+    ipcRenderer.on("preferences:changed", listener);
+    return () => ipcRenderer.removeListener("preferences:changed", listener);
   }
 };
 

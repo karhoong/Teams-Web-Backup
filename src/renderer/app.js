@@ -1,3 +1,4 @@
+const i18n = window.TeamsBackupI18n;
 const statusText = document.getElementById("statusText");
 const chatCount = document.getElementById("chatCount");
 const messageCount = document.getElementById("messageCount");
@@ -13,6 +14,28 @@ let diagnosticsOpen = false;
 let diagnosticAlertCount = 0;
 let busy = false;
 let lastPanelHeight = 0;
+let lastProgressEvent = null;
+let appInfo = { name: "Teams Web Backup", version: "" };
+
+function renderAppIdentity() {
+  document.getElementById("versionLabel").textContent = `v${appInfo.version}`;
+  document.title = `${i18n.t("appName")} v${appInfo.version}`;
+}
+
+function translateProgressMessage(message) {
+  const exact = {
+    "Starting Teams Web export...": "progressStarting",
+    "Downloading queued files...": "progressDownloading",
+    "Export complete.": "progressComplete",
+    "Export stopped. Resume from this folder later.": "progressStopped",
+    "Stop requested.": "progressStopRequested",
+    "Resetting Teams session storage...": "progressResetting",
+    "Teams session reset. Sign in again if prompted.": "progressReset",
+    "Message export complete. Waiting for queued downloads...": "progressWaitingMessages",
+    "Shared file export pass complete. Waiting for queued downloads...": "progressWaitingShared"
+  };
+  return exact[message] ? i18n.t(exact[message]) : message;
+}
 
 function reportPanelHeight() {
   if (!panel) return;
@@ -58,18 +81,28 @@ function setBusy(isBusy) {
 }
 
 function renderProgress(event) {
+  lastProgressEvent = event;
   const queueSummary = event.stats?.filesQueuedByKind
-    ? `queued: ${event.stats.filesQueuedByKind.file || 0} files, ${event.stats.filesQueuedByKind.image || 0} images, ${event.stats.filesQueuedByKind.avatar || 0} avatars, ${event.stats.filesQueuedByKind.pdf || 0} pdf, ${event.stats.filesDownloading || 0} downloading, ${event.stats.filesManual || 0} manual`
+    ? i18n.t("queueBreakdown", {
+      files: event.stats.filesQueuedByKind.file || 0,
+      images: event.stats.filesQueuedByKind.image || 0,
+      avatars: event.stats.filesQueuedByKind.avatar || 0,
+      pdf: event.stats.filesQueuedByKind.pdf || 0,
+      downloading: event.stats.filesDownloading || 0,
+      manual: event.stats.filesManual || 0
+    })
     : "";
+  delete statusText.dataset.i18n;
+  const message = translateProgressMessage(event.message);
   statusText.textContent = event.exportRoot
-    ? `${event.message} (${event.exportRoot})`
-    : event.message;
+    ? `${message} (${event.exportRoot})`
+    : message;
   if (queueSummary) statusText.title = queueSummary;
   if (event.stats) {
     chatCount.textContent = event.stats.chats;
     messageCount.textContent = event.stats.messages;
     queuedCount.textContent = event.stats.filesQueued;
-    queuedCount.parentElement.title = queueSummary || "Files waiting to download";
+    queuedCount.parentElement.title = queueSummary || i18n.t("filesWaiting");
     downloadedCount.textContent = event.stats.filesDownloaded;
     failedCount.textContent = event.stats.filesFailed;
   }
@@ -82,7 +115,7 @@ function renderQueueToggle(open) {
   queueOpen = open;
   document.body.classList.toggle("queue-open", queueOpen);
   queueToggleBtn.setAttribute("aria-expanded", String(queueOpen));
-  queueToggleBtn.textContent = queueOpen ? "Hide Queue" : "Queue Items";
+  queueToggleBtn.textContent = i18n.t(queueOpen ? "hideQueue" : "queueItems");
 }
 
 window.teamsBackup.onQueueVisibility(renderQueueToggle);
@@ -139,39 +172,46 @@ document.getElementById("panelDevtoolsBtn").addEventListener("click", () => {
   window.teamsBackup.openPanelDevTools();
 });
 
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  window.teamsBackup.openSettings();
+});
+
 document.getElementById("folderBtn").addEventListener("click", async () => {
   const folder = await window.teamsBackup.chooseBaseFolder();
-  if (folder) statusText.textContent = `Export parent folder: ${folder}`;
+  if (folder) {
+    delete statusText.dataset.i18n;
+    statusText.textContent = i18n.t("exportParentFolder", { folder });
+  }
 });
 
 document.getElementById("currentBtn").addEventListener("click", async () => {
   setBusy(true);
   const result = await window.teamsBackup.startExport({ mode: "current", downloadConcurrency: downloadConcurrency() });
-  statusText.textContent = `Current chat export started: ${result.exportRoot}`;
+  statusText.textContent = i18n.t("currentExportStarted", { folder: result.exportRoot });
 });
 
 document.getElementById("allBtn").addEventListener("click", async () => {
   setBusy(true);
   const result = await window.teamsBackup.startExport({ mode: "all", downloadConcurrency: downloadConcurrency() });
-  statusText.textContent = `All chats export started: ${result.exportRoot}`;
+  statusText.textContent = i18n.t("allExportStarted", { folder: result.exportRoot });
 });
 
 document.getElementById("sharedCurrentBtn").addEventListener("click", async () => {
   setBusy(true);
   const result = await window.teamsBackup.startExport({ mode: "shared-current", downloadConcurrency: downloadConcurrency() });
-  statusText.textContent = `Current chat Shared files export started: ${result.exportRoot}`;
+  statusText.textContent = i18n.t("currentFilesStarted", { folder: result.exportRoot });
 });
 
 document.getElementById("sharedAllBtn").addEventListener("click", async () => {
   setBusy(true);
   const result = await window.teamsBackup.startExport({ mode: "shared-all", downloadConcurrency: downloadConcurrency() });
-  statusText.textContent = `All chats Shared files export started: ${result.exportRoot}`;
+  statusText.textContent = i18n.t("allFilesStarted", { folder: result.exportRoot });
 });
 
 document.getElementById("resumeBtn").addEventListener("click", async () => {
   setBusy(true);
   const result = await window.teamsBackup.resumeFromFolder({ downloadConcurrency: downloadConcurrency() });
-  if (result) statusText.textContent = `Resuming export: ${result.exportRoot}`;
+  if (result) statusText.textContent = i18n.t("resumingExport", { folder: result.exportRoot });
   else setBusy(false);
 });
 
@@ -181,4 +221,25 @@ document.getElementById("stopBtn").addEventListener("click", () => {
 
 document.getElementById("openBtn").addEventListener("click", () => {
   window.teamsBackup.openExportFolder();
+});
+
+window.teamsBackup.onPreferencesChanged((preferences) => {
+  i18n.setPreferences(preferences);
+  renderAppIdentity();
+  renderQueueToggle(queueOpen);
+  if (lastProgressEvent) renderProgress(lastProgressEvent);
+  requestAnimationFrame(reportPanelHeight);
+});
+
+window.addEventListener("teams-backup-locale-changed", () => {
+  renderAppIdentity();
+  requestAnimationFrame(reportPanelHeight);
+});
+
+Promise.all([window.teamsBackup.getAppInfo(), window.teamsBackup.getPreferences()]).then(([info, preferences]) => {
+  appInfo = info;
+  i18n.setPreferences(preferences);
+  renderAppIdentity();
+  renderQueueToggle(queueOpen);
+  requestAnimationFrame(reportPanelHeight);
 });

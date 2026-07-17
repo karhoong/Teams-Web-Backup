@@ -1,4 +1,4 @@
-import { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, session } from "electron";
+import { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, shell, session } from "electron";
 import type { IpcMainEvent, MenuItemConstructorOptions } from "electron";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -16,10 +16,12 @@ import {
   ExportStartOptions,
   FileRecord,
   PendingFileRecord,
+  AppPreferences,
   ScrollResult,
   VisibleMessageBatch
 } from "../shared/types";
 import { sleep } from "../shared/utils";
+import { PreferencesStore } from "./preferences";
 
 const TEAMS_URL = "https://teams.cloud.microsoft/";
 const TEAMS_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0";
@@ -42,6 +44,8 @@ let downloadQueue: DownloadQueue | null = null;
 let networkCapture: NetworkCapture | null = null;
 let queueWindow: BrowserWindow | null = null;
 let diagnosticsWindow: BrowserWindow | null = null;
+let settingsWindow: BrowserWindow | null = null;
+let preferencesStore: PreferencesStore | null = null;
 let running = false;
 let stopRequested = false;
 let lastExportRoot: string | null = null;
@@ -69,6 +73,29 @@ function appIconPath(): string {
   return path.join(app.getAppPath(), "build", process.platform === "win32" ? "icon.ico" : "icon.png");
 }
 
+function appTitle(): string {
+  return `${APP_NAME} v${app.getVersion()}`;
+}
+
+function currentPreferences(): AppPreferences {
+  return preferencesStore?.get() ?? { theme: "system", language: "system" };
+}
+
+function windowBackgroundColor(): string {
+  return nativeTheme.shouldUseDarkColors ? "#1f1f24" : "#f5f5f7";
+}
+
+function applyPreferences(preferences: AppPreferences): void {
+  nativeTheme.themeSource = preferences.theme;
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.setBackgroundColor(windowBackgroundColor());
+  }
+  safeSend(mainWindow, "preferences:changed", preferences);
+  safeSend(queueWindow, "preferences:changed", preferences);
+  safeSend(diagnosticsWindow, "preferences:changed", preferences);
+  safeSend(settingsWindow, "preferences:changed", preferences);
+}
+
 function createApplicationMenu(): void {
   const template: MenuItemConstructorOptions[] = [
     ...(process.platform === "darwin" ? [{
@@ -86,6 +113,12 @@ function createApplicationMenu(): void {
     {
       label: "File",
       submenu: [
+        {
+          label: "Settings",
+          accelerator: "CmdOrCtrl+,",
+          click: () => openSettingsWindow()
+        },
+        { type: "separator" },
         {
           label: "Open Export Folder",
           click: () => {
@@ -173,9 +206,9 @@ function createWindow(): void {
     height: 940,
     minWidth: 1080,
     minHeight: 720,
-    title: APP_NAME,
+    title: appTitle(),
     icon: appIconPath(),
-    backgroundColor: "#f5f5f7",
+    backgroundColor: windowBackgroundColor(),
     webPreferences: {
       preload: path.join(__dirname, "../preload/appPreload.js"),
       contextIsolation: true,
@@ -235,8 +268,10 @@ function createWindow(): void {
     networkCapture?.stop();
     queueWindow?.destroy();
     diagnosticsWindow?.destroy();
+    settingsWindow?.destroy();
     queueWindow = null;
     diagnosticsWindow = null;
+    settingsWindow = null;
     mainWindow = null;
     teamsView = null;
   });
@@ -280,14 +315,14 @@ function createQueueWindow(): BrowserWindow {
     minHeight: 240,
     x: parentBounds ? parentBounds.x + Math.max(24, parentBounds.width - 1020) : undefined,
     y: parentBounds ? parentBounds.y + panelHeight + 24 : undefined,
-    title: "Download Queue",
+    title: `${APP_NAME} - Download Queue - v${app.getVersion()}`,
     icon: appIconPath(),
     parent: mainWindow ?? undefined,
     resizable: true,
     minimizable: false,
     maximizable: false,
     show: false,
-    backgroundColor: "#fbfbfd",
+    backgroundColor: windowBackgroundColor(),
     webPreferences: {
       preload: path.join(__dirname, "../preload/appPreload.js"),
       contextIsolation: true,
@@ -321,14 +356,14 @@ function createDiagnosticsWindow(): BrowserWindow {
     minHeight: 320,
     x: parentBounds ? parentBounds.x + Math.max(24, parentBounds.width - 1120) : undefined,
     y: parentBounds ? parentBounds.y + panelHeight + 64 : undefined,
-    title: "Diagnostics",
+    title: `${APP_NAME} - Diagnostics - v${app.getVersion()}`,
     icon: appIconPath(),
     parent: mainWindow ?? undefined,
     resizable: true,
     minimizable: false,
     maximizable: false,
     show: false,
-    backgroundColor: "#fbfbfd",
+    backgroundColor: windowBackgroundColor(),
     webPreferences: {
       preload: path.join(__dirname, "../preload/appPreload.js"),
       contextIsolation: true,
@@ -350,6 +385,43 @@ function createDiagnosticsWindow(): BrowserWindow {
     if (!appQuitting) sendDiagnosticsVisibility(false);
   });
   return viewer;
+}
+
+function createSettingsWindow(): BrowserWindow {
+  if (settingsWindow && !settingsWindow.isDestroyed()) return settingsWindow;
+  const viewer = new BrowserWindow({
+    width: 620,
+    height: 500,
+    minWidth: 520,
+    minHeight: 440,
+    title: `${APP_NAME} - Settings - v${app.getVersion()}`,
+    icon: appIconPath(),
+    parent: mainWindow ?? undefined,
+    resizable: true,
+    minimizable: false,
+    maximizable: false,
+    show: false,
+    backgroundColor: windowBackgroundColor(),
+    webPreferences: {
+      preload: path.join(__dirname, "../preload/appPreload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  settingsWindow = viewer;
+  viewer.loadFile(path.join(app.getAppPath(), "src/renderer/settings.html"));
+  viewer.once("ready-to-show", () => viewer.show());
+  viewer.on("closed", () => {
+    settingsWindow = null;
+  });
+  return viewer;
+}
+
+function openSettingsWindow(): void {
+  const viewer = createSettingsWindow();
+  if (viewer.isMinimized()) viewer.restore();
+  viewer.show();
+  viewer.focus();
 }
 
 function setQueueWindowOpen(open: boolean): void {
@@ -909,6 +981,14 @@ async function resetTeamsSession(): Promise<void> {
 }
 
 function registerIpc(): void {
+  ipcMain.handle("app:getInfo", () => ({ name: APP_NAME, version: app.getVersion() }));
+  ipcMain.handle("preferences:get", () => currentPreferences());
+  ipcMain.handle("preferences:save", (_event, value: AppPreferences) => {
+    const preferences = preferencesStore?.save(value) ?? currentPreferences();
+    applyPreferences(preferences);
+    return preferences;
+  });
+  ipcMain.handle("settings:open", () => openSettingsWindow());
   ipcMain.handle("export:start", (_event, options: ExportStartOptions) => startExport(options));
   ipcMain.handle("export:stop", () => stopExport());
   ipcMain.handle("export:chooseBaseFolder", async () => {
@@ -960,6 +1040,13 @@ function registerIpc(): void {
 }
 
 app.whenReady().then(() => {
+  preferencesStore = new PreferencesStore(app.getPath("userData"));
+  applyPreferences(preferencesStore.get());
+  nativeTheme.on("updated", () => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.setBackgroundColor(windowBackgroundColor());
+    }
+  });
   createApplicationMenu();
   if (process.platform === "darwin") app.dock?.setIcon(appIconPath());
   registerIpc();
@@ -979,5 +1066,6 @@ app.on("before-quit", () => {
   downloadQueue?.stop();
   queueWindow?.destroy();
   diagnosticsWindow?.destroy();
+  settingsWindow?.destroy();
   stopWatchdog();
 });

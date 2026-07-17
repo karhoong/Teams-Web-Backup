@@ -1,7 +1,7 @@
 {
   "name": "microsoft-teams-web-backup",
   "productName": "Teams Web Backup",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Resumable Microsoft Teams Web chat backup tool.",
   "main": "dist/main/main.js",
   "private": true,
@@ -9,7 +9,8 @@
     "build": "tsc",
     "dev": "npm run build && electron .",
     "test": "vitest run src/test",
-    "check": "npm run build && npm run test",
+    "check:renderer": "node --check src/renderer/i18n.js && node --check src/renderer/app.js && node --check src/renderer/settings.js && node --check src/renderer/queue.js && node --check src/renderer/diagnostics.js",
+    "check": "npm run build && npm run check:renderer && npm run test",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run dist:mac:all && npm run dist:win:all",
     "dist:mac": "npm run build && electron-builder --mac --publish never",

@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teams Web Backup - Settings</title>
+  <link rel="icon" href="../../build/icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="settingsWindow">
+  <main class="settingsPage">
+    <header class="settingsHeader">
+      <img class="settingsMark" src="../../build/icon.png" alt="">
+      <div>
+        <div class="titleRow">
+          <h1 data-i18n="settingsTitle">Settings</h1>
+          <span id="versionLabel" class="versionLabel"></span>
+        </div>
+        <p data-i18n="settingsSubtitle">Choose how the app looks and which language it uses.</p>
+      </div>
+    </header>
+
+    <form id="settingsForm">
+      <section class="settingsSection">
+        <div class="settingsSectionHeader">
+          <h2 data-i18n="appearance">Appearance</h2>
+          <p data-i18n="appearanceHint">This changes the backup app interface. Teams keeps its own theme setting.</p>
+        </div>
+        <div class="segmentedControl" role="radiogroup" aria-label="Appearance">
+          <label>
+            <input type="radio" name="theme" value="system">
+            <span><span data-i18n="themeSystem">Follow system</span><small data-i18n="systemDefault">Default</small></span>
+          </label>
+          <label>
+            <input type="radio" name="theme" value="light">
+            <span data-i18n="themeLight">Light</span>
+          </label>
+          <label>
+            <input type="radio" name="theme" value="dark">
+            <span data-i18n="themeDark">Dark</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="settingsSection">
+        <div class="settingsSectionHeader">
+          <h2 data-i18n="language">Language</h2>
+          <p data-i18n="languageHint">The interface updates immediately and the selection is saved for future launches.</p>
+        </div>
+        <select id="languageSelect" name="language">
+          <option value="system" data-i18n="languageSystem">System language</option>
+          <option value="en">English</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁體中文</option>
+          <option value="ja">日本語</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="pt-BR">Português (Brasil)</option>
+          <option value="ko">한국어</option>
+        </select>
+      </section>
+
+      <footer class="settingsFooter">
+        <span id="settingsVersion"></span>
+        <div class="settingsActions">
+          <span id="saveStatus" class="saveStatus" aria-live="polite"></span>
+          <button id="closeSettingsBtn" type="button" data-i18n="close">Close</button>
+          <button id="saveSettingsBtn" type="submit" class="primary" data-i18n="save">Save</button>
+        </div>
+      </footer>
+    </form>
+  </main>
+
+  <script src="./i18n.js"></script>
+  <script src="./settings.js"></script>
+</body>
+</html>

@@ -1,8 +1,16 @@
+const i18n = window.TeamsBackupI18n;
 const queueSummary = document.getElementById("queueSummary");
 const queueList = document.getElementById("queueList");
 
 let queueRefreshInFlight = false;
 let queueRefreshQueued = false;
+let latestSnapshot = null;
+let appInfo = { name: "Teams Web Backup", version: "" };
+
+function renderIdentity() {
+  document.getElementById("versionLabel").textContent = `v${appInfo.version}`;
+  document.title = `${i18n.t("appName")} - ${i18n.t("downloadQueue")} - v${appInfo.version}`;
+}
 
 function shortUrl(value) {
   try {
@@ -22,21 +30,28 @@ function appendText(parent, className, value, title) {
 }
 
 function renderQueueItems(snapshot) {
+  latestSnapshot = snapshot;
   queueList.replaceChildren();
   const hidden = Math.max(0, snapshot.total - snapshot.showing);
   const statusCounts = snapshot.items.reduce((counts, item) => {
     counts[item.status] = (counts[item.status] || 0) + 1;
     return counts;
   }, {});
-  const visibleSummary = `${statusCounts.downloading || 0} downloading, ${statusCounts.queued || 0} queued, ${statusCounts.manual || 0} manual`;
   queueSummary.textContent = snapshot.total === 0
-    ? "No queued items."
-    : `${snapshot.total} items, showing ${snapshot.showing}: ${visibleSummary}${hidden ? `, ${hidden} more in checkpoint/files.jsonl` : ""}.`;
+    ? i18n.t("noQueuedItems")
+    : i18n.t("queueSummary", {
+      total: snapshot.total,
+      showing: snapshot.showing,
+      downloading: statusCounts.downloading || 0,
+      queued: statusCounts.queued || 0,
+      manual: statusCounts.manual || 0,
+      hidden: hidden ? i18n.t("hiddenQueueItems", { count: hidden }) : ""
+    });
 
   if (snapshot.items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "queueEmpty";
-    empty.textContent = "Nothing is waiting to download.";
+    empty.textContent = i18n.t("nothingWaiting");
     queueList.appendChild(empty);
     return;
   }
@@ -48,10 +63,10 @@ function renderQueueItems(snapshot) {
 
     const status = document.createElement("div");
     status.className = "queueStatus";
-    status.textContent = item.status;
+    status.textContent = i18n.t(`status${item.status[0].toUpperCase()}${item.status.slice(1)}`);
     row.appendChild(status);
 
-    appendText(row, "queueKind", item.kind);
+    appendText(row, "queueKind", i18n.t(`kind${item.kind[0].toUpperCase()}${item.kind.slice(1)}`));
     appendText(row, "queueName", item.name, item.contentUrl);
     appendText(row, "queueChat", item.chatTopic);
     appendText(row, "queueAttempts", String(item.attempts));
@@ -62,17 +77,17 @@ function renderQueueItems(snapshot) {
     actions.className = "queueItemActions";
     const copyButton = document.createElement("button");
     copyButton.type = "button";
-    copyButton.textContent = "Copy URL";
+    copyButton.textContent = i18n.t("copyUrl");
     copyButton.addEventListener("click", () => {
       window.teamsBackup.copyText(item.contentUrl);
-      copyButton.textContent = "Copied";
+      copyButton.textContent = i18n.t("copied");
       setTimeout(() => {
-        copyButton.textContent = "Copy URL";
+        copyButton.textContent = i18n.t("copyUrl");
       }, 1200);
     });
     const openButton = document.createElement("button");
     openButton.type = "button";
-    openButton.textContent = "Open";
+    openButton.textContent = i18n.t("open");
     openButton.addEventListener("click", () => {
       window.teamsBackup.openExternalUrl(item.contentUrl);
     });
@@ -108,3 +123,20 @@ document.getElementById("closeQueueBtn").addEventListener("click", () => {
 });
 
 refreshQueueItemsSoon();
+
+window.teamsBackup.onPreferencesChanged((preferences) => {
+  i18n.setPreferences(preferences);
+  renderIdentity();
+  if (latestSnapshot) renderQueueItems(latestSnapshot);
+});
+
+window.addEventListener("teams-backup-locale-changed", () => {
+  renderIdentity();
+  if (latestSnapshot) renderQueueItems(latestSnapshot);
+});
+
+Promise.all([window.teamsBackup.getAppInfo(), window.teamsBackup.getPreferences()]).then(([info, preferences]) => {
+  appInfo = info;
+  i18n.setPreferences(preferences);
+  renderIdentity();
+});
