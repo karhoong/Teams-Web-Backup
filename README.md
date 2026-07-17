@@ -1,247 +1,248 @@
 # Teams Web Backup
 
-Teams Web Backup is an Electron desktop app for exporting Microsoft Teams Web chats when Microsoft Graph export permissions are not available.
+Teams Web Backup is a desktop application for creating a resumable local backup of Microsoft Teams Web chats when Microsoft Graph export permissions are unavailable.
 
-It opens Teams Web inside Electron, lets you sign in normally, then drives the rendered Teams UI to capture chats, messages, images, avatars, and shared files into a resumable local export folder. The output is written incrementally so a failed file download, Teams UI glitch, or app restart should not lose already captured data.
+The app opens Teams Web in an isolated Electron session. After you sign in normally, it walks the rendered chat interface, captures messages as they appear in Teams, and downloads accessible images, avatars, and shared files. Records and checkpoints are written continuously, so completed work survives an interrupted export.
 
-This project is a fallback backup tool. If your tenant admin can grant the required Microsoft Graph permissions, Graph export remains the cleaner and more stable option.
+> [!IMPORTANT]
+> This is an unofficial fallback tool, not a Microsoft product and not a replacement for an authorized Microsoft Graph compliance export. Use it only with accounts and conversations you are permitted to back up.
 
-## Features
+## Highlights
 
-- Uses your normal Teams Web login session.
-- Exports current chat, all chats, current Shared tab, or Shared files for all chats.
-- Writes Graph-like JSONL records while exporting.
-- Saves a checkpoint so exports can resume from an existing folder.
-- Downloads images and avatars through the logged-in Teams session.
-- Attempts Teams Shared-tab downloads through the Teams UI when direct file URLs redirect to Microsoft sign-in.
-- Keeps message export moving when file downloads fail.
-- Shows a resizable download queue and diagnostics window.
-- Retries or skips stuck chats, stuck scrolls, failed Shared scans, and slow downloads instead of freezing indefinitely.
-- Supports light mode, dark mode, or the system appearance. System appearance is the default.
+- Backs up the current chat or every chat visible to the signed-in account.
+- Scans the Shared area for the current chat or all chats.
+- Expands the Teams `See more` chat control before an all-chat pass.
+- Tracks chats by stable Teams identifiers, so incoming messages can reorder the list without breaking the sequence.
+- Writes Graph-like JSONL records incrementally instead of holding the entire backup in memory.
+- Saves checkpoints and resumes an existing export folder without duplicating completed messages or files.
+- Uses the authenticated Teams session for image, avatar, and file downloads.
+- Keeps message capture moving when an individual file or chat fails.
+- Provides a download queue, bounded retries, progress diagnostics, and stuck-operation recovery.
+- Supports system, light, and dark appearances.
 - Includes English, Simplified Chinese, Traditional Chinese, Japanese, Spanish, French, German, Brazilian Portuguese, and Korean interfaces.
-- Shows the installed app version in the window title, toolbar, Settings, queue, and diagnostics windows.
+- Builds for macOS and Windows on Intel/AMD and ARM64.
+
+## When to Use It
+
+Use Teams Web Backup when you need a personal or business-authorized backup but your tenant administrator cannot grant the Microsoft Graph permissions required for chat export.
+
+Prefer Microsoft Graph when those permissions are available. Graph is an official structured API and is less likely to be affected by Teams interface changes. This app extracts what Teams Web renders for the signed-in user, so policy-hidden, deleted, unavailable, or unloaded content cannot be recovered.
 
 ## How It Works
 
-The app uses a hybrid capture model:
+The exporter uses three cooperating paths:
 
-- DOM extraction is the authoritative source for visible chat messages and file links.
-- Electron session downloads use the logged-in Teams session where possible.
-- Network observation is opportunistic and useful for diagnostics, but export does not depend on matching Teams network payloads.
+1. **DOM capture:** The rendered Teams interface is the source of truth for chat names, visible messages, authors, timestamps, attachments, reactions, and file links.
+2. **Authenticated downloads:** Electron downloads media and files through the same persistent session used by the embedded Teams page.
+3. **Network observation:** Useful Teams network events are recorded for diagnostics, but the export does not depend on recognizing private API payloads.
 
-For all-chat export, the app walks the Teams chat list by stable Teams chat keys, not row positions. Because Teams can reorder chats when new messages arrive, the exporter performs bounded top-to-bottom sweeps and rescans the top of the list for newly bumped chats before finishing.
+For an all-chat export, the app first clicks the Recent Chats section's `See more` control until it disappears. It then performs bounded top-to-bottom sweeps and deduplicates by stable chat and message identifiers. If a new message moves a chat to the top during a run, later sweeps can still discover it.
 
-## Export Output
+Every message batch, file state change, and checkpoint is persisted promptly. A failed download does not roll back captured messages.
 
-By default, exports are written to:
+## Getting Started
+
+### Run from source
+
+Requirements:
+
+- Node.js 20 or newer
+- npm
+- A Microsoft account that can use Teams Web
+- Network access to Teams, SharePoint, OneDrive, and Microsoft media hosts used by your chats
+
+```sh
+git clone https://github.com/karhoong/Teams-Web-Backup.git
+cd Teams-Web-Backup
+npm install
+npm run dev
+```
+
+### Create a backup
+
+1. Sign in to Teams inside the application window.
+2. Open the **Chat** area and wait for the readiness indicator.
+3. Open **Settings** to choose the interface language, appearance, backup folder, and concurrent download count.
+4. Choose an action from **Export Chat** or **Export Files**.
+5. Keep the application open while the export and queued downloads run.
+6. Open **Queue Items** when a download needs attention. Use **Dev Tools → App** or **Dev Tools → Browser** for deeper troubleshooting.
+
+Current-chat actions remain disabled until a chat is open. All-chat actions remain disabled until the Teams chat list is ready.
+
+## Export Modes
+
+| Action | Scope | Result |
+| --- | --- | --- |
+| Export Chat → Current Chat | Open conversation | Captures its message history and queues media and attachments. |
+| Export Chat → All Chats | Recent Chats list | Expands the list, visits each chat, captures messages, and queues media and attachments. |
+| Export Files → Current Chat | Open conversation | Scans its Shared area and downloads available files without scrolling message history. |
+| Export Files → All Chats | Recent Chats list | Expands the list, visits each chat, and scans the Shared area where available. |
+| Resume | Existing export folder | Loads its checkpoint and continues unfinished chat and file work. |
+
+External or restricted conversations may not expose a Shared area. They are skipped with a diagnostic entry rather than stopping the full run.
+
+## Export Folder
+
+The default location is:
 
 ```text
 ~/Downloads/teams-web-backup/<timestamp>/
 ```
 
-Each export folder contains:
+An export contains:
+
+| Path | Purpose |
+| --- | --- |
+| `manifest.json` | Export metadata, mode, version, and creation details. |
+| `chats.jsonl` | One Graph-like chat record per line. |
+| `chat_messages.jsonl` | One Graph-like message envelope per line. |
+| `files.jsonl` | Append-only file discovery and download status history. |
+| `network_events.jsonl` | Opportunistic network observations useful for troubleshooting. |
+| `checkpoint.json` | Resume position and completed identifiers. |
+| `files/<chat-name>/` | Files and message images grouped by chat. |
+| `files/_profiles/` | Deduplicated participant avatars. |
+
+Example:
 
 ```text
-manifest.json
-chats.jsonl
-chat_messages.jsonl
-files.jsonl
-network_events.jsonl
-checkpoint.json
-files/
+teams-web-backup/2026-07-17T01-23-45-678Z/
+├── manifest.json
+├── chats.jsonl
+├── chat_messages.jsonl
+├── files.jsonl
+├── network_events.jsonl
+├── checkpoint.json
+└── files/
+    ├── FE Team 2/
+    │   ├── 1773373462269-report.pdf
+    │   └── 1779716973128-image.jpg
+    └── _profiles/
+        └── participant-name-hash.jpg
 ```
 
-Typical file layout:
+JSONL is append-friendly: every non-empty line is an independent JSON object. The format is intentionally similar to Microsoft Graph output, but DOM provenance is retained and some fields may be unavailable or inferred from the rendered page.
 
-```text
-files/
-  <chat-name>/
-    <message-id>-<filename>
-  _profiles/
-    <person>-<hash>.jpg
-```
+## File States
 
-JSONL files are append-friendly: each line is a standalone JSON object. This makes the export easier to inspect, stream, repair, and resume.
+The latest record for a file in `files.jsonl` can have one of these states:
 
-## Status Values
+| Status | Meaning |
+| --- | --- |
+| `queued` | Waiting for an available download worker. |
+| `downloading` | Being transferred or awaiting a Teams browser download. |
+| `downloaded` | Saved successfully at `localPath`. |
+| `failed` | Automatic retries were exhausted. |
+| `manual` | Teams redirected to an interactive authorization flow or did not expose an automatic download path. The original URL is retained. |
 
-File records in `files.jsonl` can have these statuses:
+Normal web links are recorded as message content and are not downloaded. Images, avatars, PDFs, documents, archives, and other actual attachments are eligible for download.
 
-- `queued`: waiting for a download worker.
-- `downloading`: currently being downloaded or waiting for Teams browser download completion.
-- `downloaded`: saved locally.
-- `failed`: failed after retries.
-- `manual`: could not be downloaded automatically; the original URL is preserved for manual handling.
+## Resume and Recovery
 
-The exporter does not block message capture on file failures.
+Choose **Resume**, then select the timestamped export folder itself. The app restores:
 
-## Requirements
+- exported chat identifiers;
+- exported message identifiers;
+- file queue and latest statuses;
+- downloaded local paths;
+- checkpoint progress.
 
-- Node.js 20 or newer is recommended.
-- npm.
-- A Microsoft account that can open Teams Web.
-- Network access to Teams and Microsoft file hosts.
+Already downloaded files and exported messages are skipped. Failed or manual records remain inspectable and may be retried during a later pass if Teams exposes a usable path.
+
+Teams Web can occasionally stop responding to automated scrolling or navigation. Recovery is deliberately bounded:
+
+- chat-open and message-scroll operations retry before being skipped;
+- a stuck message pane is nudged by scrolling down and up;
+- the exporter may visit another chat and return to recover a frozen conversation;
+- Shared scans wait for content but eventually move to the next chat;
+- the download queue has per-item retries and a final drain timeout;
+- a stalled `See more` expansion is reported, then normal stable-ID sweeps continue;
+- warnings and errors are retained by the app's diagnostics log for the current run.
+
+The design favors a completed, inspectable backup with explicit failures over freezing forever on one Teams state.
+
+## Privacy and Security
+
+- Credentials are entered only into Microsoft's Teams sign-in page.
+- The authenticated browser state is stored in the app's persistent Electron session on the local machine.
+- **Teams → Reset Session** clears that cached session and returns to sign-in.
+- Backup folders can contain sensitive messages, names, images, and business files. Protect them with appropriate disk encryption, access control, retention, and transfer policies.
+- Do not publish real export folders, logs containing private URLs, or authenticated download links.
+
+Your organization's policies and Microsoft terms still apply even though the app does not require Graph administrator consent.
 
 ## Development
 
-Install dependencies:
-
 ```sh
-npm install
+npm install          # Install dependencies
+npm run dev          # Build and launch Electron
+npm run check        # TypeScript, renderer syntax checks, and tests
+npm run test         # Unit tests only
+npm run build        # Compile TypeScript into dist/
+npm run pack         # Create an unpacked local application
 ```
 
-Run the app locally:
+The main architecture is split into:
 
-```sh
-npm run dev
-```
-
-Run static checks and tests:
-
-```sh
-npm run check
-```
-
-Run tests only:
-
-```sh
-npm run test
-```
-
-Build TypeScript only:
-
-```sh
-npm run build
-```
-
-## Using the App
-
-1. Start the app.
-2. Sign in to Teams Web inside the app window.
-3. Open the Teams Chat view.
-4. Choose an export folder, or let the app create one under Downloads.
-5. Open `Settings` to choose an appearance and interface language. Settings are saved automatically for future launches.
-6. Use one of the export actions:
-   - `Export Current Chat`
-   - `Export All Chats`
-   - `Shared Current`
-   - `Shared All Chats`
-7. Watch Diagnostics and Queue Items if anything appears stuck.
-8. If the app is stopped or closed, use `Resume` and choose the existing export folder.
-
-## Resume Behavior
-
-Resume loads:
-
-- already exported chats,
-- already exported message IDs,
-- existing file statuses,
-- checkpoint metadata.
-
-Downloaded files are skipped. Manual or failed file records can be revisited by later export passes if Teams exposes a better download path.
-
-## Stuck Export Protection
-
-Teams Web is a large, dynamic app and can occasionally stop responding to UI automation. The exporter is designed to keep moving:
-
-- chat open failures are retried, then skipped with diagnostics;
-- message scroll failures trigger scroll recovery;
-- the app may switch to a neighboring chat and back to unstick the message pane;
-- Shared-tab scan failures are logged and skipped;
-- Shared file menu download failures become `manual` file records;
-- final queue drain has a time limit, after which remaining pending files become `manual`;
-- all-chat export performs multiple bounded list sweeps to catch chats that move upward due to new messages.
-
-These protections favor completing the export pass over waiting forever on one Teams UI state.
+- `src/main/`: application lifecycle, export orchestration, persistence, diagnostics, and download workers;
+- `src/preload/teamsPreload.ts`: isolated Teams DOM discovery and interaction helpers;
+- `src/preload/appPreload.ts`: safe renderer IPC bridge;
+- `src/renderer/`: local controls, Settings, Queue, Diagnostics, themes, and translations;
+- `src/shared/`: shared types and utilities;
+- `src/test/`: focused persistence, queue, filename, preference, and deduplication tests.
 
 ## Packaging
 
-Release packaging uses Electron Builder. Artifacts are written to `release/`.
+Artifacts are generated under `release/` and are intentionally excluded from Git.
 
 ```sh
-npm run pack
 npm run dist:mac:arm64
 npm run dist:mac:x64
 npm run dist:win:x64
 npm run dist:win:arm64
 ```
 
-Convenience commands:
+Build every supported target:
 
 ```sh
-npm run dist:mac:all
-npm run dist:win:all
 npm run dist
 ```
 
-Current app identity:
+Current application identity:
 
-- Product name: `Teams Web Backup`
-- App ID: `com.karhoong.teamswebbackup`
-- Version: `1.0.2`
-- macOS icon: `build/icon.icns`
-- Windows icon: `build/icon.ico`
-- Runtime/window icon: `build/icon.png`
+- Product: `Teams Web Backup`
+- Version: `1.0.4`
+- Application ID: `com.karhoong.teamswebbackup`
+- macOS bundle: DMG and ZIP
+- Windows bundle: portable ZIP; an NSIS installer can be built with `npm run dist:win:installer`
 
-## Windows Distribution
+### macOS signing
 
-Windows ZIP builds are produced by:
-
-```sh
-npm run dist:win:x64
-```
-
-The ZIP contains a portable unpacked app. Users can extract it and run `Teams Web Backup.exe`.
-
-Unsigned Windows builds may show SmartScreen warnings. For broader distribution, sign the executable with a trusted code-signing certificate.
-
-## macOS Distribution
-
-The local macOS build is ad-hoc signed for internal testing. It is not Apple-notarized by default.
-
-Verify an arm64 build:
-
-```sh
-npm run verify:mac:arm64
-```
-
-If a trusted internal tester sees a macOS warning such as `"Teams Web Backup" is damaged and can't be opened`, it is usually Gatekeeper quarantine on an unsigned or unnotarized download. They can remove quarantine manually:
+Local macOS packages are ad-hoc signed for testing but are not Apple-notarized. A downloaded internal build may be blocked by Gatekeeper. After independently verifying and accepting the build, a tester can remove its quarantine attribute:
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/Teams Web Backup.app"
 ```
 
-For public macOS distribution:
+Public distribution should use a Developer ID Application certificate, Apple notarization, and a stapled ticket. Verify the local ARM64 bundle with:
 
-1. Enroll in the Apple Developer Program.
-2. Install a `Developer ID Application` certificate.
-3. Configure Electron Builder notarization credentials.
-4. Build, notarize, and staple the app before sharing.
+```sh
+npm run verify:mac:arm64
+```
 
-## Privacy and Security
+### Windows signing
 
-Exports may contain sensitive personal, business, and file data. Store export folders securely and only use this tool for accounts and chats you are authorized to back up.
+Portable Windows ZIPs contain `Teams Web Backup.exe`. Unsigned builds may trigger Microsoft Defender SmartScreen. Public distribution should sign the executable and installer with a trusted Windows code-signing certificate.
 
-The app does not require Microsoft Graph admin permissions, but it operates through your logged-in Teams Web session. Your organization's policies and Microsoft Teams terms still apply.
+## Known Limitations
 
-## Limitations
+- Teams can change its DOM structure without notice; selectors may require maintenance.
+- Capture is limited to content rendered for the signed-in account.
+- Very long conversations can take substantial time because Teams loads history incrementally.
+- Some SharePoint and OneDrive links require interactive authorization and become `manual` records.
+- External chats may not provide a Shared area.
+- Deleted, policy-hidden, expired, or inaccessible content cannot be exported.
+- Graph-like output is designed for backup and inspection; it is not a legal, compliance, or forensic archive.
 
-- Teams Web DOM structure can change and may require selector updates.
-- Very old messages may require long scroll sessions.
-- Some SharePoint/OneDrive file URLs may redirect to Microsoft sign-in and become `manual`.
-- External chats may not expose a Shared tab.
-- Deleted, edited, or policy-hidden messages are only captured as Teams Web renders them.
-- This is not a forensic archive tool; it is a practical user-session backup fallback.
+## License
 
-## Repository Hygiene
-
-The repo intentionally ignores:
-
-- `node_modules/`
-- `dist/`
-- `release/`
-- local environment files
-- logs
-- OS/editor noise
-
-Build resources under `build/` are tracked because Electron Builder needs the icons and macOS entitlements.
+Released under the [MIT License](LICENSE).

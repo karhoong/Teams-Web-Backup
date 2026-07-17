@@ -4,6 +4,7 @@ import {
   ChatListItem,
   ChatRecord,
   PendingFileRecord,
+  TeamsReadiness,
   TeamsMention,
   TeamsMessageEnvelope,
   VisibleMessageBatch
@@ -17,10 +18,13 @@ declare global {
 }
 
 interface TeamsDomApi {
+  getReadiness(): TeamsReadiness;
+  applyTheme(theme: "light" | "dark"): boolean;
   listChatItems(): ChatListItem[];
   openChat(key: string): Promise<boolean>;
   scrollChatListDown(): Promise<{ changed: boolean; atEnd: boolean; scrollTop: number }>;
   scrollChatListTop(): Promise<void>;
+  expandRecentChats(): Promise<{ clicks: number; remaining: boolean; loadedChatElements: number }>;
   getCurrentChat(): ChatRecord;
   collectVisibleMessages(chatHint?: ChatListItem): Promise<VisibleMessageBatch>;
   scrollMessagesUp(): Promise<{ changed: boolean; scrollTop: number }>;
@@ -37,6 +41,49 @@ interface TeamsDomRequest {
 
 const CHAT_TITLE_SELECTOR = '[id^="title-chat-list-item_"]';
 const CHAT_CONVERSATION_VALUE_PATTERN = /\/OneGQL_(GroupChatConversation|OneOnOneChatConversation|MeetingChatConversation)\|19:/i;
+const SEE_MORE_CHAT_LABEL = /^(see more|查看更多|顯示更多|もっと見る|ver más|voir plus|mehr anzeigen|ver mais|더 보기)$/i;
+let desiredTeamsTheme: "light" | "dark" | null = null;
+let themeObserver: MutationObserver | null = null;
+
+function enforceTeamsTheme(): void {
+  if (!desiredTeamsTheme) return;
+  const root = document.documentElement;
+  for (const className of Array.from(root.classList)) {
+    if (className.startsWith("theme-") && (desiredTeamsTheme === "light" || className !== "theme-darkV2")) {
+      root.classList.remove(className);
+    }
+  }
+  if (desiredTeamsTheme === "dark" && !root.classList.contains("theme-darkV2")) root.classList.add("theme-darkV2");
+  root.style.colorScheme = desiredTeamsTheme;
+}
+
+function applyTeamsTheme(theme: "light" | "dark"): boolean {
+  desiredTeamsTheme = theme;
+  enforceTeamsTheme();
+  if (!themeObserver) {
+    themeObserver = new MutationObserver(() => enforceTeamsTheme());
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  }
+  return true;
+}
+
+function getTeamsReadiness(): TeamsReadiness {
+  const chatItems = findChatListItems();
+  const chatsReady = Boolean(findRecentChatsGroup() || chatItems.length > 0);
+  const currentChatReady = Boolean(
+    document.getElementById("chat-pane-list")
+    && (chatItems.some(isSelectedChatItem) || document.querySelector('[data-tid="chat-header-title"], [data-tid="conversation-header-title"], [data-tid="thread-header-title"]'))
+  );
+  const signedIn = chatsReady || Boolean(document.querySelector(
+    '[data-tid="app-layout-area--header"], [data-tid="left-rail"], [data-tid="me-control-avatar-trigger"], [aria-label="App bar"]'
+  ));
+  return {
+    signedIn,
+    chatsReady,
+    currentChatReady,
+    reason: currentChatReady ? "ready" : signedIn ? "open-chats" : document.readyState === "complete" ? "sign-in-required" : "loading"
+  };
+}
 
 function elementText(el: Element | null): string {
   return el ? cleanText((el as HTMLElement).innerText || el.textContent || "") : "";
@@ -90,18 +137,84 @@ function chatItemKey(item: Element): string {
   return cleanText(item.getAttribute("aria-label") || item.getAttribute("title") || chatTitle(item) || "");
 }
 
-function findRecentChatsGroup(): Element | null {
+function findRecentChatsFolder(): Element | null {
   const folders = Array.from(document.querySelectorAll('[role="treeitem"][data-conversation-folder="true"], [data-conversation-folder="true"]'));
   for (const folder of folders) {
     const value = folder.getAttribute("data-fui-tree-item-value") || "";
     const itemType = folder.getAttribute("data-item-type") || "";
     const headerId = folder.querySelector("[data-id]")?.getAttribute("data-id") || "";
     const isRecentChats = value.includes("RecentChats") || headerId.includes("RECENT_CHATS") || (itemType === "chats" && elementText(folder).startsWith("Chats"));
-    if (!isRecentChats) continue;
-    const group = Array.from(folder.children).find((child) => child.getAttribute("role") === "group") ?? folder.querySelector('[role="group"]');
-    if (group) return group;
+    if (isRecentChats) return folder;
   }
   return null;
+}
+
+function findRecentChatsGroup(): Element | null {
+  const folder = findRecentChatsFolder();
+  if (!folder) return null;
+  return Array.from(folder.children).find((child) => child.getAttribute("role") === "group") ?? folder.querySelector('[role="group"]');
+}
+
+function findRecentChatsSeeMore(): HTMLElement | null {
+  const folder = findRecentChatsFolder();
+  if (!folder) return null;
+  const candidates = Array.from(folder.querySelectorAll<HTMLElement>(
+    'button, a, [role="button"], [data-tid*="see-more" i], [data-tid*="load-more" i]'
+  ));
+  return candidates.find((candidate) => {
+    const label = cleanText(candidate.getAttribute("aria-label") || candidate.getAttribute("title") || elementText(candidate));
+    const marker = `${candidate.id} ${candidate.getAttribute("data-tid") || ""}`;
+    return SEE_MORE_CHAT_LABEL.test(label) || /(see|load)[-_ ]?more/i.test(marker);
+  }) ?? null;
+}
+
+function recentChatsExpansionSignature(control: Element): string {
+  const folder = findRecentChatsFolder();
+  const items = findChatListItems();
+  const tailKeys = items.slice(-5).map(chatItemKey).join("|");
+  return `${items.length}|${tailKeys}|${(folder as HTMLElement | null)?.scrollHeight ?? 0}|${elementText(control)}`;
+}
+
+async function expandRecentChats(): Promise<{ clicks: number; remaining: boolean; loadedChatElements: number }> {
+  const deadline = Date.now() + (4 * 60 * 1000);
+  const maxClicks = 250;
+  let clicks = 0;
+  let unchangedRounds = 0;
+
+  while (clicks < maxClicks && Date.now() < deadline) {
+    const control = findRecentChatsSeeMore();
+    if (!control) {
+      return { clicks, remaining: false, loadedChatElements: document.querySelectorAll(CHAT_TITLE_SELECTOR).length };
+    }
+
+    control.scrollIntoView({ block: "center", inline: "nearest" });
+    await sleep(250);
+    const beforeSignature = recentChatsExpansionSignature(control);
+    clickElement(control);
+    clicks += 1;
+
+    let nextControl: HTMLElement | null = control;
+    let afterSignature = beforeSignature;
+    const changeDeadline = Math.min(deadline, Date.now() + 5000);
+    while (Date.now() < changeDeadline) {
+      await sleep(250);
+      nextControl = findRecentChatsSeeMore();
+      if (!nextControl) {
+        return { clicks, remaining: false, loadedChatElements: document.querySelectorAll(CHAT_TITLE_SELECTOR).length };
+      }
+      afterSignature = recentChatsExpansionSignature(nextControl);
+      if (afterSignature !== beforeSignature) break;
+    }
+
+    unchangedRounds = afterSignature === beforeSignature ? unchangedRounds + 1 : 0;
+    if (unchangedRounds >= 8) break;
+  }
+
+  return {
+    clicks,
+    remaining: Boolean(findRecentChatsSeeMore()),
+    loadedChatElements: document.querySelectorAll(CHAT_TITLE_SELECTOR).length
+  };
 }
 
 function isChatConversationItem(item: Element): boolean {
@@ -834,6 +947,8 @@ function collectVisibleMessages(chatHint?: ChatListItem): VisibleMessageBatch {
 }
 
 const api: TeamsDomApi = {
+  getReadiness: getTeamsReadiness,
+  applyTheme: applyTeamsTheme,
   listChatItems() {
     return findChatListItems().map((item, index) => ({
       key: chatItemKey(item),
@@ -866,6 +981,7 @@ const api: TeamsDomApi = {
     if (container) container.scrollTop = 0;
     await sleep(600);
   },
+  expandRecentChats,
   getCurrentChat,
   async collectVisibleMessages(chatHint?: ChatListItem) {
     await ensureChatTab();

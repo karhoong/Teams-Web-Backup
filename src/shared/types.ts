@@ -8,6 +8,17 @@ export type LanguagePreference = "system" | "en" | "zh-CN" | "zh-TW" | "ja" | "e
 export interface AppPreferences {
   theme: ThemePreference;
   language: LanguagePreference;
+  downloadConcurrency: number;
+  baseFolder: string | null;
+}
+
+export type TeamsReadinessReason = "loading" | "sign-in-required" | "open-chats" | "ready";
+
+export interface TeamsReadiness {
+  signedIn: boolean;
+  chatsReady: boolean;
+  currentChatReady: boolean;
+  reason: TeamsReadinessReason;
 }
 
 export interface AppInfo {
@@ -243,6 +254,7 @@ export interface AppApi {
   getAppInfo(): Promise<AppInfo>;
   getPreferences(): Promise<AppPreferences>;
   savePreferences(preferences: AppPreferences): Promise<AppPreferences>;
+  getTeamsReadiness(): Promise<TeamsReadiness>;
   openSettings(): Promise<void>;
   startExport(options: ExportStartOptions): Promise<{ exportRoot: string }>;
   stopExport(): Promise<void>;
@@ -265,4 +277,5 @@ export interface AppApi {
   onDiagnosticEvent(callback: (event: DiagnosticEvent) => void): () => void;
   onProgress(callback: (event: ExportProgress) => void): () => void;
   onPreferencesChanged(callback: (preferences: AppPreferences) => void): () => void;
+  onTeamsReadinessChanged(callback: (readiness: TeamsReadiness) => void): () => void;
 }

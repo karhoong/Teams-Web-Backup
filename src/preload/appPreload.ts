@@ -5,6 +5,7 @@ const api: AppApi = {
   getAppInfo: () => ipcRenderer.invoke("app:getInfo"),
   getPreferences: () => ipcRenderer.invoke("preferences:get"),
   savePreferences: (preferences) => ipcRenderer.invoke("preferences:save", preferences),
+  getTeamsReadiness: () => ipcRenderer.invoke("teams:getReadiness"),
   openSettings: () => ipcRenderer.invoke("settings:open"),
   startExport: (options: ExportStartOptions) => ipcRenderer.invoke("export:start", options),
   stopExport: () => ipcRenderer.invoke("export:stop"),
@@ -46,6 +47,11 @@ const api: AppApi = {
     const listener = (_event: Electron.IpcRendererEvent, preferences: Parameters<typeof callback>[0]) => callback(preferences);
     ipcRenderer.on("preferences:changed", listener);
     return () => ipcRenderer.removeListener("preferences:changed", listener);
+  },
+  onTeamsReadinessChanged: (callback) => {
+    const listener = (_event: Electron.IpcRendererEvent, readiness: Parameters<typeof callback>[0]) => callback(readiness);
+    ipcRenderer.on("teams:readiness", listener);
+    return () => ipcRenderer.removeListener("teams:readiness", listener);
   }
 };
 

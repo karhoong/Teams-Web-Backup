@@ -9,80 +9,103 @@
 </head>
 <body>
   <header class="panel">
-    <div class="brand">
-      <img class="mark" src="../../build/icon.png" alt="">
-      <div>
-        <div class="titleRow">
-          <h1 data-i18n="appName">Teams Web Backup</h1>
-          <span id="versionLabel" class="versionLabel"></span>
+    <div class="panelPrimary">
+      <div class="brand">
+        <img class="mark" src="../../build/icon.png" alt="">
+        <div class="brandCopy">
+          <div class="titleRow">
+            <h1 data-i18n="appName">Teams Web Backup</h1>
+            <span id="versionLabel" class="versionLabel"></span>
+          </div>
+          <p id="statusText" data-i18n="initialStatus">Sign in to Teams, open Chats, then start an export.</p>
         </div>
-        <p id="statusText" data-i18n="initialStatus">Sign in to Teams, open Chats, then start an export.</p>
+      </div>
+
+      <div class="utilityActions">
+        <span id="readinessBadge" class="readinessBadge waiting">
+          <span class="readinessDot" aria-hidden="true"></span>
+          <span id="readinessText" data-i18n="checkingTeams">Checking Teams</span>
+        </span>
+
+        <details class="menu utilityMenu">
+          <summary>
+            <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            <span data-i18n="teams">Teams</span>
+            <i class="menuChevron" data-lucide="chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="menuPanel menuPanelRight">
+            <button id="teamsBtn" data-busy-disabled="true"><i data-lucide="refresh-cw" aria-hidden="true"></i><span data-i18n="reloadTeams">Reload Teams</span></button>
+            <button id="resetTeamsBtn" data-busy-disabled="true"><i data-lucide="log-out" aria-hidden="true"></i><span data-i18n="resetSession">Reset Session</span></button>
+          </div>
+        </details>
+
+        <details class="menu utilityMenu">
+          <summary>
+            <i data-lucide="code-2" aria-hidden="true"></i>
+            <span data-i18n="devTools">Dev Tools</span>
+            <i class="menuChevron" data-lucide="chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="menuPanel menuPanelRight">
+            <button id="panelDevtoolsBtn"><i data-lucide="panel-top" aria-hidden="true"></i><span data-i18n="app">App</span></button>
+            <button id="teamsDevtoolsBtn"><i data-lucide="monitor" aria-hidden="true"></i><span data-i18n="browser">Browser</span></button>
+          </div>
+        </details>
+
+        <button id="settingsBtn" class="iconButton" data-i18n-title="settings" data-i18n-aria-label="settings" title="Settings" aria-label="Settings">
+          <i data-lucide="settings-2" aria-hidden="true"></i>
+        </button>
       </div>
     </div>
 
-    <div class="actions">
-      <details class="menu">
-        <summary data-i18n="teams">Teams</summary>
-        <div class="menuPanel">
-          <button id="teamsBtn" data-busy-disabled="true" data-i18n="reloadTeams">Reload Teams</button>
-          <button id="resetTeamsBtn" data-busy-disabled="true" data-i18n="resetSession">Reset Session</button>
-        </div>
-      </details>
+    <div class="commandBar">
+      <div class="stats">
+        <span><b id="chatCount">0</b> <span data-i18n="chats">chats</span></span>
+        <span><b id="messageCount">0</b> <span data-i18n="messages">messages</span></span>
+        <span><b id="queuedCount">0</b> <span data-i18n="queued">queued</span></span>
+        <span><b id="downloadedCount">0</b> <span data-i18n="files">files</span></span>
+        <span><b id="failedCount">0</b> <span data-i18n="failed">failed</span></span>
+        <button id="queueToggleBtn" class="queueToggle" aria-expanded="false">
+          <i data-lucide="list-down" aria-hidden="true"></i>
+          <span id="queueToggleText" data-i18n="queueItems">Queue Items</span>
+        </button>
+      </div>
 
-      <details class="menu">
-        <summary data-i18n="folder">Folder</summary>
-        <div class="menuPanel">
-          <button id="folderBtn" data-busy-disabled="true" data-i18n="chooseFolder">Choose Folder</button>
-          <button id="openBtn" data-i18n="openExport">Open Export</button>
-        </div>
-      </details>
+      <div class="actions">
+        <details id="exportChatMenu" class="menu actionMenu unavailable">
+          <summary class="primary">
+            <i data-lucide="messages-square" aria-hidden="true"></i>
+            <span data-i18n="exportChat">Export Chat</span>
+            <i class="menuChevron" data-lucide="chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="menuPanel menuPanelRight">
+            <button id="currentBtn" data-export-action="current" disabled><i data-lucide="message-square" aria-hidden="true"></i><span data-i18n="currentChat">Current Chat</span></button>
+            <button id="allBtn" data-export-action="all" disabled><i data-lucide="messages-square" aria-hidden="true"></i><span data-i18n="allChats">All Chats</span></button>
+          </div>
+        </details>
 
-      <label class="concurrencyControl" data-i18n-title="concurrentThreads" title="Concurrent download threads">
-        <span data-i18n="concurrentThreads">Concurrent Download Threads</span>
-        <input id="concurrencyInput" type="number" min="1" max="10" step="1" value="5">
-      </label>
+        <details id="exportFilesMenu" class="menu actionMenu unavailable">
+          <summary class="primary">
+            <i data-lucide="folder-down" aria-hidden="true"></i>
+            <span data-i18n="exportFiles">Export Files</span>
+            <i class="menuChevron" data-lucide="chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="menuPanel menuPanelRight">
+            <button id="sharedCurrentBtn" data-export-action="current" disabled><i data-lucide="file-down" aria-hidden="true"></i><span data-i18n="currentChat">Current Chat</span></button>
+            <button id="sharedAllBtn" data-export-action="all" disabled><i data-lucide="folder-down" aria-hidden="true"></i><span data-i18n="allChats">All Chats</span></button>
+          </div>
+        </details>
 
-      <details class="menu">
-        <summary class="primary" data-i18n="exportChat">Export Chat</summary>
-        <div class="menuPanel">
-          <button id="currentBtn" data-busy-disabled="true" data-i18n="currentChat">Current Chat</button>
-          <button id="allBtn" data-busy-disabled="true" data-i18n="allChats">All Chats</button>
-        </div>
-      </details>
-
-      <details class="menu">
-        <summary class="primary" data-i18n="exportFiles">Export Files</summary>
-        <div class="menuPanel">
-          <button id="sharedCurrentBtn" data-busy-disabled="true" data-i18n="currentChat">Current Chat</button>
-          <button id="sharedAllBtn" data-busy-disabled="true" data-i18n="allChats">All Chats</button>
-        </div>
-      </details>
-
-      <button id="resumeBtn" data-busy-disabled="true" data-i18n="resume" data-i18n-title="resumeTitle" title="Resume from an existing export folder">Resume</button>
-      <button id="stopBtn" class="danger" disabled data-i18n="stop">Stop</button>
-
-      <details class="menu">
-        <summary data-i18n="devTools">Dev Tools</summary>
-        <div class="menuPanel menuPanelRight">
-          <button id="panelDevtoolsBtn" data-i18n="app">App</button>
-          <button id="teamsDevtoolsBtn" data-i18n="browser">Browser</button>
-        </div>
-      </details>
-      <button id="settingsBtn" class="iconButton" data-i18n-title="settings" data-i18n-aria-label="settings" title="Settings" aria-label="Settings">
-        <span aria-hidden="true">&#9881;</span>
-      </button>
-    </div>
-
-    <div class="stats">
-      <span><b id="chatCount">0</b> <span data-i18n="chats">chats</span></span>
-      <span><b id="messageCount">0</b> <span data-i18n="messages">messages</span></span>
-      <span><b id="queuedCount">0</b> <span data-i18n="queued">queued</span></span>
-      <span><b id="downloadedCount">0</b> <span data-i18n="files">files</span></span>
-      <span><b id="failedCount">0</b> <span data-i18n="failed">failed</span></span>
-      <button id="queueToggleBtn" class="queueToggle" aria-expanded="false" data-i18n="queueItems">Queue Items</button>
+        <button id="resumeBtn" class="commandButton" data-i18n-title="resumeTitle" title="Resume from an existing export folder" disabled>
+          <i data-lucide="history" aria-hidden="true"></i><span data-i18n="resume">Resume</span>
+        </button>
+        <button id="stopBtn" class="danger commandButton" disabled>
+          <i data-lucide="square" aria-hidden="true"></i><span data-i18n="stop">Stop</span>
+        </button>
+      </div>
     </div>
   </header>
 
+  <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
   <script src="./i18n.js"></script>
   <script src="./app.js"></script>
 </body>

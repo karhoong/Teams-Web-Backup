@@ -18,6 +18,7 @@ import {
   PendingFileRecord,
   AppPreferences,
   ScrollResult,
+  TeamsReadiness,
   VisibleMessageBatch
 } from "../shared/types";
 import { sleep } from "../shared/utils";
@@ -26,8 +27,7 @@ import { PreferencesStore } from "./preferences";
 const TEAMS_URL = "https://teams.cloud.microsoft/";
 const TEAMS_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0";
 const TEAMS_PARTITION = "persist:teams-web-backup-v2";
-const DEFAULT_PANEL_HEIGHT = 118;
-const DEFAULT_DOWNLOAD_CONCURRENCY = 5;
+const DEFAULT_PANEL_HEIGHT = 126;
 const APP_NAME = "Teams Web Backup";
 const APP_ID = "com.karhoong.teamswebbackup";
 
@@ -58,6 +58,13 @@ let lastPhase: ExportProgress["phase"] | "unknown" = "unknown";
 let watchdogTimer: NodeJS.Timeout | null = null;
 let lastWatchdogWarningAt = 0;
 let panelHeight = DEFAULT_PANEL_HEIGHT;
+let readinessTimer: NodeJS.Timeout | null = null;
+let teamsReadiness: TeamsReadiness = {
+  signedIn: false,
+  chatsReady: false,
+  currentChatReady: false,
+  reason: "loading"
+};
 const diagnosticsLog: DiagnosticEvent[] = [];
 const MAX_DIAGNOSTICS = 500;
 const WATCHDOG_WARNING_MS = 90000;
@@ -78,7 +85,7 @@ function appTitle(): string {
 }
 
 function currentPreferences(): AppPreferences {
-  return preferencesStore?.get() ?? { theme: "system", language: "system" };
+  return preferencesStore?.get() ?? { theme: "system", language: "system", downloadConcurrency: 5, baseFolder: null };
 }
 
 function windowBackgroundColor(): string {
@@ -87,6 +94,7 @@ function windowBackgroundColor(): string {
 
 function applyPreferences(preferences: AppPreferences): void {
   nativeTheme.themeSource = preferences.theme;
+  selectedBaseFolder = preferences.baseFolder;
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.setBackgroundColor(windowBackgroundColor());
   }
@@ -94,6 +102,49 @@ function applyPreferences(preferences: AppPreferences): void {
   safeSend(queueWindow, "preferences:changed", preferences);
   safeSend(diagnosticsWindow, "preferences:changed", preferences);
   safeSend(settingsWindow, "preferences:changed", preferences);
+  void applyTeamsTheme();
+}
+
+function resolvedTheme(): "light" | "dark" {
+  return nativeTheme.shouldUseDarkColors ? "dark" : "light";
+}
+
+async function applyTeamsTheme(): Promise<void> {
+  if (!teamsView || teamsView.webContents.isDestroyed()) return;
+  try {
+    await callTeams<boolean>("applyTheme", [resolvedTheme()], 5000, false);
+  } catch {
+    // The preload may not be ready during navigation; did-finish-load retries it.
+  }
+}
+
+function setTeamsReadiness(readiness: TeamsReadiness): void {
+  if (JSON.stringify(readiness) === JSON.stringify(teamsReadiness)) return;
+  teamsReadiness = readiness;
+  safeSend(mainWindow, "teams:readiness", readiness);
+  safeSend(settingsWindow, "teams:readiness", readiness);
+}
+
+async function refreshTeamsReadiness(): Promise<TeamsReadiness> {
+  try {
+    const readiness = await callTeams<TeamsReadiness>("getReadiness", [], 5000, false);
+    setTeamsReadiness(readiness);
+  } catch {
+    setTeamsReadiness({ signedIn: false, chatsReady: false, currentChatReady: false, reason: "loading" });
+  }
+  return teamsReadiness;
+}
+
+function startReadinessPolling(): void {
+  if (readinessTimer) clearInterval(readinessTimer);
+  void refreshTeamsReadiness();
+  readinessTimer = setInterval(() => void refreshTeamsReadiness(), 2000);
+}
+
+function stopReadinessPolling(): void {
+  if (!readinessTimer) return;
+  clearInterval(readinessTimer);
+  readinessTimer = null;
 }
 
 function createApplicationMenu(): void {
@@ -243,6 +294,7 @@ function createWindow(): void {
   });
   teamsView.webContents.on("did-start-navigation", (_event, url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
+      setTeamsReadiness({ signedIn: false, chatsReady: false, currentChatReady: false, reason: "loading" });
       console.log(`[teams:navigate] ${url}`);
       addDiagnostic("info", "teams", `Navigating Teams page`, url);
     }
@@ -257,6 +309,8 @@ function createWindow(): void {
     console.log(`[teams:loaded] ${teamsView?.webContents.getURL()}`);
     addDiagnostic("info", "teams", "Teams page loaded", teamsView?.webContents.getURL());
     void continueFromClassicTeamsInterstitial();
+    void applyTeamsTheme();
+    startReadinessPolling();
   });
   teamsView.webContents.on("did-navigate", () => {
     void continueFromClassicTeamsInterstitial();
@@ -265,6 +319,7 @@ function createWindow(): void {
 
   mainWindow.on("resize", layoutTeamsView);
   mainWindow.on("closed", () => {
+    stopReadinessPolling();
     networkCapture?.stop();
     queueWindow?.destroy();
     diagnosticsWindow?.destroy();
@@ -390,10 +445,10 @@ function createDiagnosticsWindow(): BrowserWindow {
 function createSettingsWindow(): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) return settingsWindow;
   const viewer = new BrowserWindow({
-    width: 620,
-    height: 500,
-    minWidth: 520,
-    minHeight: 440,
+    width: 720,
+    height: 650,
+    minWidth: 600,
+    minHeight: 560,
     title: `${APP_NAME} - Settings - v${app.getVersion()}`,
     icon: appIconPath(),
     parent: mainWindow ?? undefined,
@@ -450,7 +505,7 @@ function setDiagnosticsWindowOpen(open: boolean): void {
   sendDiagnosticsVisibility(false);
 }
 
-async function callTeams<T>(method: string, args: unknown[] = [], timeoutMs = 15000): Promise<T> {
+async function callTeams<T>(method: string, args: unknown[] = [], timeoutMs = 15000, diagnose = true): Promise<T> {
   if (!teamsView) throw new Error("Teams view is not ready.");
   const view = teamsView;
   const id = randomUUID();
@@ -463,7 +518,7 @@ async function callTeams<T>(method: string, args: unknown[] = [], timeoutMs = 15
       if (reply?.ok) resolve(reply.value as T);
       else {
         const error = new Error(reply?.error || `Teams helper ${method} failed.`);
-        addDiagnostic("error", "export", `Teams helper ${method} failed`, error);
+        if (diagnose) addDiagnostic("error", "export", `Teams helper ${method} failed`, error);
         reject(error);
       }
     };
@@ -471,7 +526,7 @@ async function callTeams<T>(method: string, args: unknown[] = [], timeoutMs = 15
     timeout = setTimeout(() => {
       ipcMain.removeListener(replyChannel, listener);
       const error = new Error(`Teams helper ${method} did not respond. Reload Teams and try again.`);
-      addDiagnostic("error", "export", `Teams helper ${method} timed out`, error);
+      if (diagnose) addDiagnostic("error", "export", `Teams helper ${method} timed out`, error);
       reject(error);
     }, timeoutMs);
 
@@ -512,7 +567,7 @@ async function continueFromClassicTeamsInterstitial(): Promise<void> {
 }
 
 function normalizeDownloadConcurrency(value: number | undefined): number {
-  return Math.min(10, Math.max(1, Math.floor(value ?? DEFAULT_DOWNLOAD_CONCURRENCY)));
+  return Math.min(10, Math.max(1, Math.floor(value ?? currentPreferences().downloadConcurrency)));
 }
 
 function createDownloadQueue(store: ExportStore, downloadConcurrency: number): DownloadQueue {
@@ -593,9 +648,13 @@ function stopWatchdog(): void {
 async function startExport(options: ExportStartOptions): Promise<{ exportRoot: string }> {
   if (running) throw new Error("An export is already running.");
   if (!teamsView) throw new Error("Teams view is not ready.");
+  const readiness = await refreshTeamsReadiness();
+  const currentMode = options.mode === "current" || options.mode === "shared-current";
+  if (!readiness.signedIn || !readiness.chatsReady) throw new Error("Sign in to Teams and open Chats before starting an export.");
+  if (currentMode && !readiness.currentChatReady) throw new Error("Open a chat before exporting the current chat.");
 
   const exportRoot = options.exportRoot
-    ?? path.join(selectedBaseFolder ?? app.getPath("downloads"), "teams-web-backup", new Date().toISOString().replace(/[:.]/g, "-"));
+    ?? path.join(selectedBaseFolder ?? currentPreferences().baseFolder ?? app.getPath("downloads"), "teams-web-backup", new Date().toISOString().replace(/[:.]/g, "-"));
 
   exportStore = new ExportStore(exportRoot, options.mode, Boolean(options.resume));
   const downloadConcurrency = normalizeDownloadConcurrency(options.downloadConcurrency);
@@ -667,6 +726,24 @@ async function runExport(mode: ExportStartOptions["mode"], store: ExportStore, q
 }
 
 async function exportAllChats(store: ExportStore, queue: DownloadQueue, sharedOnly: boolean): Promise<void> {
+  sendProgress({
+    phase: "starting",
+    message: "Expanding the complete Teams chat list...",
+    exportRoot: store.exportRoot,
+    stats: store.stats
+  });
+  try {
+    const expansion = await callTeams<{ clicks: number; remaining: boolean; loadedChatElements: number }>("expandRecentChats", [], 5 * 60 * 1000);
+    addDiagnostic(
+      expansion.remaining ? "warning" : "info",
+      "export",
+      expansion.remaining ? "Teams chat list still shows See more after expansion attempts" : "Teams chat list fully expanded",
+      expansion
+    );
+  } catch (error) {
+    addDiagnostic("warning", "export", "Could not fully expand the Teams chat list; continuing with list sweeps", error);
+  }
+
   const processed = store.processedChatKeys;
   const failedOpenCounts = new Map<string, number>();
   let chatListFailures = 0;
@@ -988,6 +1065,7 @@ function registerIpc(): void {
     applyPreferences(preferences);
     return preferences;
   });
+  ipcMain.handle("teams:getReadiness", () => refreshTeamsReadiness());
   ipcMain.handle("settings:open", () => openSettingsWindow());
   ipcMain.handle("export:start", (_event, options: ExportStartOptions) => startExport(options));
   ipcMain.handle("export:stop", () => stopExport());
@@ -996,13 +1074,15 @@ function registerIpc(): void {
     const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
     if (result.canceled || result.filePaths.length === 0) return null;
     selectedBaseFolder = result.filePaths[0];
+    const preferences = preferencesStore?.save({ ...currentPreferences(), baseFolder: selectedBaseFolder }) ?? currentPreferences();
+    applyPreferences(preferences);
     return selectedBaseFolder;
   });
   ipcMain.handle("export:resumeFromFolder", async (_event, resumeOptions?: Pick<ExportStartOptions, "downloadConcurrency">) => {
     const dialogOptions = { properties: ["openDirectory"] as Array<"openDirectory">, title: "Choose existing Teams backup folder" };
     const result = mainWindow ? await dialog.showOpenDialog(mainWindow, dialogOptions) : await dialog.showOpenDialog(dialogOptions);
     if (result.canceled || result.filePaths.length === 0) return null;
-    return startExport({ mode: "all", exportRoot: result.filePaths[0], resume: true, downloadConcurrency: resumeOptions?.downloadConcurrency });
+    return startExport({ mode: "all", exportRoot: result.filePaths[0], resume: true, downloadConcurrency: resumeOptions?.downloadConcurrency ?? currentPreferences().downloadConcurrency });
   });
   ipcMain.handle("teams:navigate", async () => {
     await teamsView?.webContents.loadURL(TEAMS_URL, { userAgent: TEAMS_USER_AGENT });
@@ -1046,11 +1126,13 @@ app.whenReady().then(() => {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) window.setBackgroundColor(windowBackgroundColor());
     }
+    void applyTeamsTheme();
   });
   createApplicationMenu();
   if (process.platform === "darwin") app.dock?.setIcon(appIconPath());
   registerIpc();
   createWindow();
+  if (process.argv.includes("--show-settings")) setTimeout(() => openSettingsWindow(), 500);
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -1068,4 +1150,5 @@ app.on("before-quit", () => {
   diagnosticsWindow?.destroy();
   settingsWindow?.destroy();
   stopWatchdog();
+  stopReadinessPolling();
 });

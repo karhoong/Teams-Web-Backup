@@ -4,7 +4,9 @@ import { AppPreferences, LanguagePreference, ThemePreference } from "../shared/t
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
   theme: "system",
-  language: "system"
+  language: "system",
+  downloadConcurrency: 5,
+  baseFolder: null
 };
 
 const THEMES = new Set<ThemePreference>(["system", "light", "dark"]);
@@ -15,7 +17,13 @@ export function normalizePreferences(value: unknown): AppPreferences {
   const candidate = value as Partial<AppPreferences>;
   return {
     theme: candidate.theme && THEMES.has(candidate.theme) ? candidate.theme : DEFAULT_PREFERENCES.theme,
-    language: candidate.language && LANGUAGES.has(candidate.language) ? candidate.language : DEFAULT_PREFERENCES.language
+    language: candidate.language && LANGUAGES.has(candidate.language) ? candidate.language : DEFAULT_PREFERENCES.language,
+    downloadConcurrency: Number.isFinite(candidate.downloadConcurrency)
+      ? Math.min(10, Math.max(1, Math.floor(candidate.downloadConcurrency as number)))
+      : DEFAULT_PREFERENCES.downloadConcurrency,
+    baseFolder: typeof candidate.baseFolder === "string" && candidate.baseFolder.trim()
+      ? candidate.baseFolder
+      : DEFAULT_PREFERENCES.baseFolder
   };
 }
 

@@ -1,19 +1,23 @@
 :root {
-  --app-bg: #f5f5f7;
-  --panel-bg: #fbfbfd;
-  --surface: #fff;
-  --surface-hover: #f2f1fa;
-  --surface-disabled: #f4f3f8;
-  --text: #242129;
-  --text-soft: #312f3f;
-  --muted: #626074;
-  --border: #d8d7e6;
-  --border-strong: #c7c5df;
-  --border-soft: #dedde8;
-  --line: #ecebf4;
-  --row-line: #f0eff6;
-  --disabled-text: #9b98aa;
-  --disabled-border: #e5e3ee;
+  --app-bg: #f2f2f7;
+  --panel-bg: rgba(250, 250, 252, 0.96);
+  --surface: #ffffff;
+  --surface-hover: #f0f0f5;
+  --surface-disabled: #f4f4f6;
+  --text: #1d1d1f;
+  --text-soft: #34343a;
+  --muted: #6e6e73;
+  --border: #d2d2d7;
+  --border-strong: #b8b8c0;
+  --border-soft: #dfdfe4;
+  --line: #e5e5ea;
+  --row-line: #ededf0;
+  --disabled-text: #aeaeb2;
+  --disabled-border: #e2e2e7;
+  --accent: #5e5ce6;
+  --accent-hover: #4f4dd4;
+  --success: #248a3d;
+  --warning: #a05a00;
   --danger-surface: #fff4f2;
   --danger-border: #e2aaa7;
   --warning-surface: #fffaf0;
@@ -24,25 +28,29 @@
   color: var(--text);
   background: var(--app-bg);
   color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
 }
 
 :root[data-theme="dark"] {
-  --app-bg: #1f1f24;
-  --panel-bg: #27262d;
-  --surface: #323139;
-  --surface-hover: #3d3b46;
-  --surface-disabled: #2b2a31;
-  --text: #f5f4f8;
-  --text-soft: #eeedf3;
-  --muted: #b9b6c7;
-  --border: #555260;
-  --border-strong: #6b6779;
-  --border-soft: #494753;
-  --line: #403e48;
-  --row-line: #45434d;
-  --disabled-text: #817e8c;
-  --disabled-border: #45434d;
+  --app-bg: #1c1c1e;
+  --panel-bg: rgba(36, 36, 38, 0.97);
+  --surface: #2c2c2e;
+  --surface-hover: #3a3a3c;
+  --surface-disabled: #29292c;
+  --text: #f5f5f7;
+  --text-soft: #e5e5ea;
+  --muted: #aeaeb2;
+  --border: #48484a;
+  --border-strong: #636366;
+  --border-soft: #3a3a3c;
+  --line: #38383a;
+  --row-line: #363638;
+  --disabled-text: #69696d;
+  --disabled-border: #3a3a3c;
+  --accent: #7d7aff;
+  --accent-hover: #8d8aff;
+  --success: #30d158;
+  --warning: #ff9f0a;
   --danger-surface: #481f25;
   --danger-border: #8f4a50;
   --warning-surface: #3c3320;
@@ -56,21 +64,25 @@
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"],
   :root:not([data-theme]) {
-    --app-bg: #1f1f24;
-    --panel-bg: #27262d;
-    --surface: #323139;
-    --surface-hover: #3d3b46;
-    --surface-disabled: #2b2a31;
-    --text: #f5f4f8;
-    --text-soft: #eeedf3;
-    --muted: #b9b6c7;
-    --border: #555260;
-    --border-strong: #6b6779;
-    --border-soft: #494753;
-    --line: #403e48;
-    --row-line: #45434d;
-    --disabled-text: #817e8c;
-    --disabled-border: #45434d;
+    --app-bg: #1c1c1e;
+    --panel-bg: rgba(36, 36, 38, 0.97);
+    --surface: #2c2c2e;
+    --surface-hover: #3a3a3c;
+    --surface-disabled: #29292c;
+    --text: #f5f5f7;
+    --text-soft: #e5e5ea;
+    --muted: #aeaeb2;
+    --border: #48484a;
+    --border-strong: #636366;
+    --border-soft: #3a3a3c;
+    --line: #38383a;
+    --row-line: #363638;
+    --disabled-text: #69696d;
+    --disabled-border: #3a3a3c;
+    --accent: #7d7aff;
+    --accent-hover: #8d8aff;
+    --success: #30d158;
+    --warning: #ff9f0a;
     --danger-surface: #481f25;
     --danger-border: #8f4a50;
     --warning-surface: #3c3320;
@@ -98,12 +110,34 @@ button {
   background: var(--surface);
   color: var(--text-soft);
   border-radius: 7px;
-  height: 32px;
-  padding: 0 11px;
+  height: 30px;
+  padding: 0 10px;
   font: inherit;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+button,
+.menu summary,
+.readinessBadge {
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+button > svg,
+.menu summary > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+button:not(.iconButton) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 button:hover,
@@ -120,13 +154,13 @@ button:disabled {
 
 button.primary,
 .menu summary.primary {
-  background: #6264a7;
-  border-color: #6264a7;
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
 .menu summary.primary:hover {
-  background: #55569a;
+  background: var(--accent-hover);
 }
 
 button.danger {
@@ -145,28 +179,34 @@ body.is-busy button.danger:not(:disabled) {
 }
 
 button.queueToggle {
-  height: 30px;
+  height: 28px;
   border-radius: 999px;
   padding: 0 12px;
 }
 
 button.iconButton {
-  width: 32px;
-  min-width: 32px;
+  width: 30px;
+  min-width: 30px;
   padding: 0;
-  font-size: 18px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.iconButton svg {
+  width: 16px;
+  height: 16px;
 }
 
 body.queue-open button.queueToggle {
-  background: #464775;
-  border-color: #464775;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
 button.active {
-  background: #464775;
-  border-color: #464775;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -182,39 +222,6 @@ button.active.hasAlert {
   background: #464775;
 }
 
-.concurrencyControl {
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-soft);
-  border-radius: 7px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.concurrencyControl input {
-  width: 42px;
-  height: 22px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 5px;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  text-align: center;
-}
-
-.concurrencyControl:has(input:disabled) {
-  color: var(--disabled-text);
-  background: var(--surface-disabled);
-  border-color: var(--disabled-border);
-}
-
 .menu {
   position: relative;
   display: inline-block;
@@ -225,15 +232,16 @@ button.active.hasAlert {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
+  height: 30px;
   min-width: 76px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-soft);
   border-radius: 7px;
-  padding: 0 28px 0 11px;
+  gap: 6px;
+  padding: 0 9px;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
   position: relative;
@@ -243,17 +251,15 @@ button.active.hasAlert {
   display: none;
 }
 
-.menu summary::after {
-  content: "";
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-65%) rotate(45deg);
-  opacity: 0.72;
+.menu summary .menuChevron {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+  transition: transform 140ms ease;
+}
+
+.menu[open] summary .menuChevron {
+  transform: rotate(180deg);
 }
 
 .menu[open] summary {
@@ -262,8 +268,16 @@ button.active.hasAlert {
 }
 
 .menu[open] summary.primary {
-  background: #55569a;
-  border-color: #55569a;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.menu.unavailable summary {
+  cursor: not-allowed;
+  color: var(--disabled-text);
+  background: var(--surface-disabled);
+  border-color: var(--disabled-border);
+  opacity: 0.68;
 }
 
 .menuPanel {
@@ -276,7 +290,7 @@ button.active.hasAlert {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 10px 26px rgba(38, 36, 56, 0.18);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18), 0 2px 7px rgba(0, 0, 0, 0.08);
 }
 
 .menuPanelRight {
@@ -290,6 +304,7 @@ button.active.hasAlert {
   text-align: left;
   margin: 0;
   border-color: transparent;
+  box-shadow: none;
 }
 
 .menuPanel button + button {
@@ -298,27 +313,39 @@ button.active.hasAlert {
 
 .panel {
   height: fit-content;
-  display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(0, auto);
-  grid-template-rows: auto auto;
-  gap: 8px 18px;
-  padding: 10px 18px 8px;
+  padding: 9px 16px 8px;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border-soft);
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.panelPrimary,
+.commandBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.commandBar {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
 }
 
 .brand {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   min-width: 0;
 }
 
 .mark {
-  width: 48px;
-  min-width: 48px;
-  flex: 0 0 48px;
-  height: 48px;
+  width: 42px;
+  min-width: 42px;
+  flex: 0 0 42px;
+  height: 42px;
   display: block;
   border-radius: 8px;
   object-fit: contain;
@@ -326,38 +353,85 @@ button.active.hasAlert {
 
 h1 {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
   letter-spacing: 0;
 }
 
 p {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 760px;
+  max-width: min(48vw, 760px);
 }
 
+.brandCopy {
+  min-width: 0;
+}
+
+.utilityActions,
 .actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 7px;
-  max-width: 980px;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.readinessBadge {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 190px;
+  padding: 0 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.readinessBadge > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readinessDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.readinessBadge.ready .readinessDot {
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent);
+}
+
+.readinessBadge.partial .readinessDot {
+  background: var(--warning);
+}
+
+.readinessBadge.waiting .readinessDot {
+  animation: readinessPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes readinessPulse {
+  50% { opacity: 0.38; }
 }
 
 .stats {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
-  padding-bottom: 0;
   overflow: visible;
 }
 
@@ -365,13 +439,23 @@ p {
   border: 1px solid var(--border-soft);
   background: var(--surface);
   border-radius: 999px;
-  padding: 5px 10px;
+  padding: 4px 8px;
   color: var(--muted);
   font-size: 12px;
 }
 
 .stats b {
   color: var(--text);
+}
+
+@media (max-width: 1180px) {
+  .readinessBadge {
+    max-width: 130px;
+  }
+
+  .stats > span {
+    padding-inline: 7px;
+  }
 }
 
 .queuePanel {
@@ -665,22 +749,22 @@ body.diagnosticsWindow {
 }
 
 body.settingsWindow {
-  min-width: 520px;
-  min-height: 440px;
+  min-width: 600px;
+  min-height: 560px;
   overflow: auto;
   background: var(--app-bg);
 }
 
 .settingsPage {
   min-height: 100vh;
-  padding: 24px 28px;
+  padding: 22px 28px;
 }
 
 .settingsHeader {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 22px;
+  padding-bottom: 18px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -705,7 +789,7 @@ body.settingsWindow {
   grid-template-columns: minmax(160px, 0.75fr) minmax(260px, 1.25fr);
   gap: 24px;
   align-items: start;
-  padding: 24px 0;
+  padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -775,11 +859,12 @@ body.settingsWindow {
 }
 
 .segmentedControl input:focus-visible + span {
-  outline: 2px solid #6264a7;
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.settingsSection select {
+.settingsSection select,
+.settingsSection input[type="number"] {
   width: 100%;
   height: 40px;
   border: 1px solid var(--border);
@@ -789,6 +874,63 @@ body.settingsWindow {
   color: var(--text);
   font: inherit;
   font-size: 13px;
+}
+
+.settingsControls {
+  display: grid;
+  gap: 12px;
+}
+
+.fieldRow,
+.folderSetting {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fieldRow input[type="number"] {
+  width: 64px;
+  height: 28px;
+  padding: 0 6px;
+  text-align: center;
+}
+
+.folderSetting {
+  align-items: center;
+}
+
+.folderPathBlock {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.fieldLabel {
+  color: var(--text-soft);
+}
+
+.folderPath {
+  min-width: 0;
+  max-width: 270px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secondaryAction {
+  justify-self: start;
 }
 
 .settingsFooter {
@@ -809,7 +951,7 @@ body.settingsWindow {
 
 .saveStatus {
   min-width: 54px;
-  color: #4f8a58;
+  color: var(--success);
   font-weight: 700;
   text-align: right;
 }
